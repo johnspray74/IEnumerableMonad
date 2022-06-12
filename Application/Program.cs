@@ -1,55 +1,51 @@
 ﻿// This code is wrtten as example code for chapter 3 section on moands in the online book at abstractionlayeredarchitecture.com
 // See that website for full discussion of the comparison between ALA and monads
-// The maybe monad has three implentations in this one project.
-// Which one is used depends on two defines: PushMonad and ALA.
-// 1) In the Monad folder in the Monad.Maybe namespace, there is a conventional implementaion using IMaybe. It is immediate, which means the bind function evaluates as it goes.
 
-// 2) In the Monad folder in the Monad.PushMaybe namespace, an implemntation that is deferred. A deferred monad is wired up by the Bind function for runnning later,
-//    or for continuous data flow.
-//    This version is needed to compare with ALA, which is always deferred. A deferred dataflow can be either pull or push driven. (similar to IEnumerable and IObservable.)
-//    The one implemented here is a push monad because in ALA we default to pushing type dataflows, and only use pull when it makes more sense).
-//    Note that while we think of monads as composing functions, deferred monads actually consist of a structure built of objects.
-//    The Bind function operates on a left object and creates a right object.
-//    If the monad works by pushing, the left object has a reference to the right object. Bind then returns the right object ready for the next Bind call.
-//    The interface Imaybe, is implemented by the right object. This makes sense because data is pushed from left to right through the objects.
-//    Therefore we need an interface that is implemented on the left object for the Bind function to use. This interface is called ISubscribeMaybe.
-//    The Bind extension method is defined on this interface.
-//    The ISubscribeMaybe and IMaybe interfaces are exactly analogous to the IObservable and IObserver interfaces.
+// In brief ALA and monads are both composition patterns.
+// ALA composes objects and monads compose functions.
+// ALA is a more gneral composng solution. It is also easier to understand because it uses plain objects.
+// Monads, at lead defrred type monads gnerate a lot of code under the covers, which makes them difficult to understand an explain.
+// So if ALA is a more general solution, what we can do implement monad behaviour (composition of functions) using ALA.
+// This is easily done by creating a programming paradigm to do what the monad interface does,
+// and writing a domain abstraction with one input port and one output port of the programming paradigm.
+// The domain abstraction takes a configuration parameter via its constructor which is exactly the form of the functions that monads use.
+// Essentially then you can wire up instance of thse domain abstractions using WireIn instead of Bind like this:
+// .WireIn(new EnumerableMonad(lambda expression).
+// And if you really want the exact same syntax as monads you can write a Bind function that just does that.
+// This project starts out implementing monads, and then shows how they can be implemented in ALA.
 
-// 3) ALA already comes with programming paradigms (which are almost the same thing as monad interfaces, same abstraction level).
-//    And ALA is about composing objects (domain abstractions).
-//    So it's really easy to implement monad like functionality.
-//    All that is needed is a domain abstraction that's configurable via the constructor with a lambda expression of the type used by the respective monad.
-//    Such a domain abstraction can be simply used like this: .WireIn(new Maybe(lambda expession))
-//    This domain abstraction is Maybe.cs in the DomainAbstractions subfolder.
-//    Then if we really want the same syntax as Monads, we can provide a Bind extension method which just does .WireIn(new Maybe(lambda expession)).
-//    As with the deferred/push monad we described above, the interface, IMonad is implemented by the right monad object, not the left.
-//    So the Bind extension method can't be defined on that interface. Instead we define Bind on a dummy interface called IBindable.
-//    IBindable is like ISubscribemaybe that we had to use for the deferred/push monad, except it doesn't need a subscribe method in it. IBandable contains no methods. 
-//    The Bind function doesn't need a subscribe method, it just uses WireIn instead, becasue that's how all domain abstractions are wired.
+// The IEnumerable monad has three implentations in this one project.
+// Which one is used depends on two defines: IEnumerableMonad and ALA.
+// 1) In the Monad folder in the Monad.List namespace, there is a conventional Bind implementaion using List<T>. It is immediate, which means the bind function evaluates as it goes.
 
-// To read this code, first take a look at the abstractions it uses. First look at the interfaces, classes and extension methods in Maybe.cs in the Monad subfolder. 
+// 2) In the Monad folder in the Monad.IEnumerable namespace, an implemntation that using Ienumerable, which is a deferred monad, so it doesn't get evaluated by the Binf function
+//    but rather the Bind function sets up code to run later
+//    There are two versions of the Bind function there, one that uses yield return (which makes the complier do all the real work of creating a new IEnumerable)
+//    and one that doesn't use yield return. 
+//    The one that doesn't use yield return is need for compainf with ALA. 
+//    Note that while we think of monads as composing functions, deferred monad Bind functions actually return a structure built of objects.
+//    This structure of objects consists of many compiler generated classed such as delgates and closures.
+
+// 3) The ALA implementation of monads involves writing a domain abstraction that is pretty similar to the class needed for the monad implemenation
+
+// To read this code, first take a look at the abstractions it uses. First look at the interfaces, classes and extension methods in EnumerableMonad.cs in the Monad subfolder. 
 // Unless you are unfamiar with how monads work, you don't need to read the implementations.
 // Then you should be able to read the Application method in this file.
-// Notice how the first version uses the immediate version of the monad. The Bind functions actually returns a result immediately
+// Notice how the first version uses the immediate version of the monad, the List. The Bind functions actually returns a result List immediately.
 
-// Notice how the second version uses the deferred/push version of the monad. The Bind function returns a program.
-// The program is a reference to the first object in the chain (the ToMaybe object) because it is a push monad.
-// If we had implemented a deferred/pull monad, that reference would have been the last object in the chain. 
-// We make the program run be calling program.Run().
+// Notice how the second version uses the deferred/pull version of the monad. The Bind function returns a program.
+// The program is a reference to the last object in the chain because it is a pull monad.
+// If we had implemented a deferred/push monad, that reference would have been the last object in the chain. 
+// We make the program run be calling program.ToList() or by just using the return IEnumerable.
 
-// Notice how the ALA version uses the same code as the monad version. I added a Bind extension method (and its IBindable interface) which we normally would other with for ALA.
-// With the Bind method added, I could prove that the ALA implementation allowed us to use identical syntax.
-// But you can see it uses an ALA implementation because the using Monad.PushMaybe namespace is taken out, and the using Domainabstractions namespace is in.
-// If you compare the ALA version of the Maybe.cs in the DomainAbstraction with the Maybe.cs in the Monad folder, you will see they are practically identical.
+// Notice how the ALA version uses the same code as the monad version.
+// I added a Bind extension method which we normally wouldn't bother with for ALA.
+// With the Bind method added, I could prove that the ALA implementation allowed us to use identical syntax as monads for composing functions.
+// But you can see it uses an ALA implementation because the using Monad.Enumerable namespace is taken out, and the using Domainabstractions namespace is in.
+// If you compare the ALA version of the Enumerable.cs in the DomainAbstraction with the EnumerableMonad.cs in the Monad folder, you will see they are practically identical.
 // The differences are:
-//  1) The ALA Bind function uses WireIn whereas the monad Bind function uses the subscribe method on the ISubscribeMaybe interface.
-//  2) The ALA domain abstraction does implements IBinadable (which is an empty interface) instead of iSubscribeMaybe
-
-// If you feel that the pushing version of the monad we have implemented here is not a real monad because the composed functions are not returning an interface,
-// they are of the form Action<T, IMonad<U>, well it's ok, it's just semantics.
-// We could just as easily implement a deferred pull monad which does compose functions of the form I -> IMaybe<U>,
-// and still the ALA and monad implementations would be practically identical.
+//  1) The monad class used wires itself to its source via the constructor
+//  2) The ALA domain abstraction has an extra interface added called WireForward. This allw the WireTo or WireIn operators to wire in the direction of the dataflow.
 
 // So if ALA and monad can both compose functions, why use ALA?
 // Its becasue ALA can do everything monads can do, but monads can't do everything ALA can do. ALA composes objects.
@@ -86,7 +82,6 @@ namespace Application
 {
     class Program
     {
-        // Main just uses the Nito.AsyncEx package to proovde a dispatcher to enable console programs to use async/await on one thread.
         // It just calls another function called Application
         // (if you don't do this then Main will either complete immediately (ending the program before the asyncronous tasks finish)
         // or if you put in a ConsoleReadKey or Thread.Sleep at the end of Main, that will just block the main thread, causing the asynchronous tasks to run on other threads.
@@ -114,19 +109,16 @@ namespace Application
 
 
 
-        // The application function composes two functions using the Continuation monad.
-        // The Continuation monad consists of Task<T> plus the Totask extension method plus the Bind extension method (both of which are defined in the programming paradigms layer folder)
-        // First it creates a source Task with the value 1. Then the first function adds 2, then the second function adds a number from the console. 
-        // The thing is, because we are using the Coninuation monad, these two functions are allowed to take as much time as they want (be asynchronous).
-        // To demo that, the first function does a delay, and the second function waits for Console input.
-        // What the monad does is, despite these functions taking time and returning a Task object instead of an immediate result, allows you to compose them as if they were functions that just return a result. You just have to use the Bind function to compose them.
-        // And the function must return Task<U> instead of U.
-        // The monad code in the programming paradigms layer takes care of making everything work by providing two extension methiods, Bind() and ToTask().
-        // There is no blocking of the main thread in this program until it hits the final ReadKey.
-        // Everything runs on a single thread.
+        // The application function composes two functions using the List<T> or IEnumerable<T> monad.
+        // The functions do the same thing, they take a number and produce three numbers that end in 1, 2 and 3.
+        // So for example if the function receives 2, it will return 21, 22, and 23.
+        // Note that the List and IEnumerable monads expand the number of items with each application of a function.
+        // You can write Select and Aggregate functions that don't expand, but the monad function itself does expand the number of results.
+        // A more practical example of the monad would say take a student and return all their courses.
 
-        // There are two versions - the first version uses async/await. If you are not familiar with async/await then use the second version which uses ContinueWith instead.
-        // Each version has a verbose version that Console.WriteLines stuff to see what is going on.
+        // First we create a source IEnumerable with a single value 0.
+        // Then the function is binded in three times, so we end up with 27 numbers starting from 111, and ending with 333. 
+        // The monad code in the monad or programming paradigms layer takes care of making everything work by providing two extension methiods, Bind() and ToTask().
 
 #if !IEnumerableMonad && !ALA
 
@@ -135,7 +127,8 @@ namespace Application
 
         static void Application()
         {
-            var result = new List<int> { 1, 2, 3 }
+            var result = new List<int> { 0 }
+            .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 })
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 })
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 });
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
@@ -147,21 +140,18 @@ namespace Application
 
         static void Application()
         {
-            var result = Return1Then2Then3()
+            var program = new List<int> { 0 }
 #if ALA
             .ToWireableEnumerable()
 #endif
             .Bind(x => MutiplyBy10AndAdd1Then2Then3(x))
+            .Bind(x => MutiplyBy10AndAdd1Then2Then3(x))
             .Bind(x => MutiplyBy10AndAdd1Then2Then3(x));
+
+            var result = program.ToList();
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
 
-        private static IEnumerable<int> Return1Then2Then3()
-        {
-            yield return 1;
-            yield return 2;
-            yield return 3;
-        }
 
         private static IEnumerable<int> MutiplyBy10AndAdd1Then2Then3(int x)
         {

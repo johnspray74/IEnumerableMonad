@@ -63,11 +63,11 @@
 
 // #define IEnumerableMonad                 // demo of deferred monad using IEnumerable. Bind is in Monad.Enumerable namespace
 // #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
-// #define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
+#define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
 
 // #define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
-#define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
+// #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
 
 
@@ -162,14 +162,11 @@ namespace Application
         static void Application()
         {
             var program = new[] { 0 }  // start with an iEnumerable with one item
-#if ALAPullUsingBind
-            .ToWireableEnumerable()    // convert to something that can be wired with WireIn(), because the ALA version of Bind just calls WireIn
-#endif
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3);
 
-            var result = program.ToList();
+            var result = program.ToList();  // now run the program
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
 
@@ -195,10 +192,9 @@ namespace Application
         static void Application()
         {
             var program = (IEnumerable<int>) new List<int> { 0 }
-            .ToWireableEnumerable()
-            .WireIn(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireIn(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireIn(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3));
+            .WireInR(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3));
             var result = program.ToList();
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
@@ -226,15 +222,12 @@ namespace Application
         {
             // Demonstration of composing functions that take an int and return an IObservable<int> (MutiplyBy10AndAdd1Then2Then3)
 
-            // I don't want the observable chain to run when the subscribes are done.
-            // I want to first wire up a program, complete will all suscriptions, then run it later, so that these are clearly two phases.
-            // To do this I use the factory Create method to make an IObservable, which wen subscriptions happen, will call my delegate with an observer, which I can simply save to call later.
+            // I don't want the observable chain to run when the source is subscribed to.
+            // I want to first wire up a program, then run it later, so that these are clearly two phases.
+            // To do this I use the factory Create method to make an IObservable, which when it is subscribed to, will call my delegate with an observer, which I can simply save to call later.
             IObserver<int> program = null;
 
             Observable.Create<int>(observer => { program = observer; return Disposable.Empty; })
-#if ALAPushUsingBind
-             .ToWireableObserver()
-#endif
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3)
@@ -268,13 +261,11 @@ namespace Application
         {
             IObserver<int> program = null;
 
-            // var program1 = new Subject<int>();
             Observable.Create<int>(observer => { program = observer; return Disposable.Empty; })
-            .ToWrieableObserver()
-            .WireIn(new ObserverMonad<int,int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireIn(new ObserverMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireIn(new ObserverMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .Cast<IObservable<int>>()
+            .WireInR(new IObservableMonad<int,int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new IObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new IObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .Cast<IObservable<int>>()  // because WireInR returns an object
             .Subscribe((x) => Console.Write($"{x} "),
                         (ex) => Console.Write($"Exception {ex}"),
                         () => Console.Write("Complete")

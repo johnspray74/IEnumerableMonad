@@ -1,7 +1,6 @@
 ﻿
 
 
-using ProgrammingParadigms;
 using Foundation;
 using System;
 using System.Collections;
@@ -13,21 +12,6 @@ using System.Collections.Generic;
 
 namespace DomainAbstractions
 {
-
-    // The way the IEnumerable ports work on this domain abstraction, you would need to use WireTo in the opposite direction to the dataflow, i.e. destination.WireTo(source).
-    // That would work bu it would be utterly confusing.
-    // This interface exists solely to provide ports for which WireTo works in the same direction as the dataflow.
-    // That is the source has a field of this interface and the destination implements this interface
-    // These ports will be wired, and immediately the source will call the Push method, which effectively gets the wiring done in the opposite direction, which is needed because its a pulling dataflow programming paradigm.
-    public interface IWireable 
-    {
-        void Push(IEnumerable ie);
-    }
-
-
-
-
-
     // extension methods for the EnumerableMonad
 
     public static class ListMonadExtensionMethods
@@ -37,43 +21,33 @@ namespace DomainAbstractions
         public static IEnumerable<U> Bind<T, U>(this IEnumerable<T> source, Func<T, IEnumerable<U>> function)
         {
             var em = new EnumerableMonad<T, U>(function);
-            source.WireTo(em);
+            source.WireToR(em);
             return em;
         }
 
-        public static IEnumerable<T> ToWireableEnumerable<T>(this IEnumerable<T> source)
-        {
-            return new ToEnumerableMonad<T>(source);
-        }
     }
 
 
 
 
-    // This is the ALA domain absraction class to support monad behaviour.
-    // It is configured with a lambda function from the application layer
-    // It is Wireable using WireIn or WireTo.
-    // What's more, it is wireable in the same direction as the dataflow.
-    // It can be used without Bind e.g. source.WireIn(new EnumerableMonad(lambda expressions))
-    // Bind is only provided to make the syntax of its use exactly the same as monads. We wouldn't normally provide it. We would use .WireIn(new EnumerableMonad(lambda expressions)) instead.
-
+    // This is the ALA domain absraction class to support monad behaviour - composing functions that take a value and return an IEnumerable.
+    // It is configured with a lambda function from the application layer.
+    // It has an input port and an output port which both use the iEnumerable programming paradigm
+    // It is Wireable using WireInR.
+    // WirInR is used like WireIn, but does the actual wiring in reverse which is required by the IEnumerable interface.
+    // source.WireIn(new EnumerableMonad(lambda)) 
+    // Bind is only provided to make the syntax of its use exactly the same as monads. We wouldn't normally provide it. We would use WireInR instead
+    // .Bind(lambda)
     // Note that the body of this class is identical to the one used for the monad implementaion in the monad namespace.
     // Note that this monad is a deferred/pull type of monad. 
     // The class is basically driven by the MoveNext method, which is called by the next monad down the chain.
     // MoveNext does everything.
     // The class is completely deferred, so it doesn't even get the source IEnumerator from the source IEnumerable until the first call of MoveNext.
 
-    // It has an input "port" which is the source field.
+    // It has an input "port" which is the source IEnumrable field.
     // It has an output "port", which is the implemented IEnumerable interface.
-    // Note that we don't want to do the wiring using these ports because we would have to wire in the opposite direction to the dataflow, which would be confusing.
-    // So we use another pair of ports that go in the opposite direction for the WireIn to use. These are the Wireable intrfaces ports.
-    // The Wireable ports are used to wire up the IEnumerable ports that go in the opposite direction.
-    // Note that these are wired in the opposite direction to the dataflow. Tht's becasue this is a pull type monad
-    // Indeed the ALA version is based on this class. but will be wired up using the WireIn operator instead.
 
-
-
-    class EnumerableMonad<T, U> : IWireForward, IEnumerator<U>, IEnumerable<U>
+    class EnumerableMonad<T, U> : IEnumerator<U>, IEnumerable<U>
     {
         //------------------------------------------------------------------------
         // implement the constructor
@@ -84,29 +58,7 @@ namespace DomainAbstractions
         public EnumerableMonad(Func<T, IEnumerable<U>> function) { this.function = function; }
 
 
-        //------------------------------------------------------------------------
-        // Implement the IWireForward interface
-        // When using a pull type programming paradigm, in this case iEnumerable, teh WireTo method would have to be used backwards if we wired the IEnumerable ports directly.
-        // The WireForward interface allows us to use WireTo or WireIn in the same direction as the dataflow. 
-        // see the documentation in the WireForward interface to understand why we use the interface WireForward.
-
-        private IWireForward wireForward;  // This is the port that actually gets wired by WireTo or WireIn.
         private IEnumerable<T> source;  // main input port. This port is not wired directly by WireTo, but indirectly by the use of the WireForward interface.
-
-
-        // This runs on the source of the dataflow
-        private void wireForwardInitialize()  // This is called by WireTo immediately after the wireForward port is wired.
-        {
-            wireForward.Push(this);
-        }
-
-
-        void IWireForward.Push(object o)
-        {
-            source = (IEnumerable<T>)o;
-        }
-
-
 
 
 
@@ -180,58 +132,5 @@ namespace DomainAbstractions
 
     }
 
-
-
-
-    class ToEnumerableMonad<T> : IWireForward, IEnumerable<T>
-    {
-        //------------------------------------------------------------------------
-        // implement the constructor
-
-
-
-        public ToEnumerableMonad(IEnumerable<T> source) { this.source = source; }
-
-
-        //------------------------------------------------------------------------
-        // Implement the IWireForward interface
-        // When using a pull type programming paradigm, in this case iEnumerable, teh WireTo method would have to be used backwards if we wired the IEnumerable ports directly.
-        // The WireForward interface allows us to use WireTo or WireIn in the same direction as the dataflow. 
-        // see the documentation in the WireForward interface to understand why we use the interface WireForward.
-
-        private IWireForward wireForward;  // This is the port that actually gets wired by WireTo or WireIn.
-        private IEnumerable<T> source;  // main input port. This port is not wired directly by WireTo, but indirectly by the use of the WireForward interface.
-
-
-        // This runs on the source of the dataflow
-        private void wireForwardInitialize()  // This is called by WireTo immediately after the wireForward port is wired.
-        {
-            wireForward.Push(this);
-        }
-
-
-        void IWireForward.Push(object o)
-        {
-            source = (IEnumerable<T>)o;
-        }
-
-
-
-
-
-        //------------------------------------------------------------------------
-        // Implement the IEnumerable interface
-
-        IEnumerator<T> IEnumerable<T>.GetEnumerator()
-        {
-            return source.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return source.GetEnumerator();
-        }
-
-    }
 
 }

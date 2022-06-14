@@ -155,6 +155,26 @@ namespace Foundation
         }
 
 
+        // Some programming paradigm interfaces that we want to use need to be wired in the reverse direction from out average ALA push based dataflows.
+        // The B object has the field and the A object implements it.
+        // But the dataflow direction is from A to B, so we want to use WireTo or WireIn in the same direction as the dataflow.
+        // These two Wiring methods reverse the wiring.
+        // WireTo still returns the A object to support easy wiring of one object to many
+        // WireIn still returns the B object to support chaining of operations
+
+        public static object WireToR<T>(this T A, object B, string APortName = null)
+        {
+            WireTo(B, A, APortName);
+            return A;
+        }
+
+
+        public static object WireInR<T>(this T A, object B, string APortName = null)
+        {
+            WireTo(B, A, APortName);
+            return B;
+        }
+
 
         // This method is called after we have done a succesfull wiring
         // It looks for a private method in the A object with the same name as the port's field with the word "Initialize" postfix

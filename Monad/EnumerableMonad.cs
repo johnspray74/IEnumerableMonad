@@ -15,7 +15,7 @@ namespace Monad.Enumerable
 
     // extension methods for the EnumerableMonad
 
-    public static class ListMonadExtensionMethods
+    public static class MonadExtensionMethods
     {
 
 #if !UseYieldReturn

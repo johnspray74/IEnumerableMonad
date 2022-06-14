@@ -58,25 +58,43 @@
 // Or if they are push style monads like iObservable, they can have more than one output subscriber. But that as far as the topology goes.
 
 
+// uncomment one of the following variations
+// #define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
 
-// #define IEnumerableMonad
-#define ALA              // Selects ALA version designed to run identical application layer
+// #define IEnumerableMonad                 // demo of deferred monad using IEnumerable. Bind is in Monad.Enumerable namespace
+// #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
+// #define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
+
+// #define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
+// #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
+#define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
 
-#if ALA
-using DomainAbstractions;
-#else
-#if IEnumerableMonad
-using Monad.Enumerable;
-#else
+
+#if ListMonad
 using Monad.List;
 #endif
+
+#if IEnumerableMonad
+using Monad.Enumerable;
 #endif
+
+#if IObservableMonad
+using Monad.ObservableMonad;
+#endif
+
+#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind
+using DomainAbstractions;
 using Foundation;
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Disposables;
 
 namespace Application
 {
@@ -93,7 +111,7 @@ namespace Application
             try
             {
                 Debug.WriteLine("The application has started");
-#if ALA
+#if ALAPullUsingWireIn || ALAPushUsingWireIn
                 Wiring.diagnosticOutput += (s) => Debug.WriteLine(s);
 #endif
                 Application();
@@ -120,38 +138,46 @@ namespace Application
         // Then the function is binded in three times, so we end up with 27 numbers starting from 111, and ending with 333. 
         // The monad code in the monad or programming paradigms layer takes care of making everything work by providing two extension methiods, Bind() and ToTask().
 
-#if !IEnumerableMonad && !ALA
-
-
+#if ListMonad
         // This is a simple sample application that uses the typical implemention of maybe Monad.
 
         static void Application()
         {
-            var result = new List<int> { 0 }
+            var result = new List<int> { 0 }  
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 })
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 })
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 });
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
+#endif
 
-#else // IEnumerable or ALA version
+
+
+#if IEnumerableMonad || ALAPullUsingBind
+
+        // IEnumerable version
 
         // This is the same simple application as above, but uses deferred implementation of the List monad which is IEnumerable.
 
         static void Application()
         {
-            var program = new List<int> { 0 }
-#if ALA
-            .ToWireableEnumerable()
+            var program = new[] { 0 }  // start with an iEnumerable with one item
+#if ALAPullUsingBind
+            .ToWireableEnumerable()    // convert to something that can be wired with WireIn(), because the ALA version of Bind just calls WireIn
 #endif
-            .Bind(x => MutiplyBy10AndAdd1Then2Then3(x))
-            .Bind(x => MutiplyBy10AndAdd1Then2Then3(x))
-            .Bind(x => MutiplyBy10AndAdd1Then2Then3(x));
+            .Bind(MutiplyBy10AndAdd1Then2Then3)
+            .Bind(MutiplyBy10AndAdd1Then2Then3)
+            .Bind(MutiplyBy10AndAdd1Then2Then3);
 
             var result = program.ToList();
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
 
+
+        // for the IEnumerableMonad version of the compose function, (a function that takes a number and returns three numbers ending in 1, 2 and 3)
+        // I didn't want make lists like I did in the List version above.
+        // That meant creating a class that implements IEnumerable. The yield return syntax below is by far the easiest way to do that, as the compiler creates the needed class for you.
+        // In the enumerableMonad.cs file in the monad subfolder, you can see a class that implements iEnumerable without using yield return syntax.
 
         private static IEnumerable<int> MutiplyBy10AndAdd1Then2Then3(int x)
         {
@@ -159,9 +185,128 @@ namespace Application
             yield return x * 10 + 2;
             yield return x * 10 + 3;
         }
+#endif
+
+
+
+
+#if ALAPullUsingWireIn
+
+        static void Application()
+        {
+            var program = (IEnumerable<int>) new List<int> { 0 }
+            .ToWireableEnumerable()
+            .WireIn(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireIn(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireIn(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3));
+            var result = program.ToList();
+            Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
+        }
+
+
+        // for the IEnumerableMonad version of the composed function, (a function that takes a number and returns three numbers ending in 1, 2 and 3)
+        // we don't want to return a list like we did in the List version above, we want to return a proper IEnumerable.
+        // The yield return syntax is by far the easiest way to do that, as the compiler creates the needed class for you.
+        // In the EnumerableMonad.cs file in the monad subfolder, you can see a class that implements iEnumerable without using yield return syntax.
+
+        private static IEnumerable<int> MutiplyBy10AndAdd1Then2Then3(int x)
+        {
+            yield return x * 10 + 1;
+            yield return x * 10 + 2;
+            yield return x * 10 + 3;
+        }
+#endif
+
+
+
+
+
+#if IObservableMonad || ALAPushUsingBind
+        static void Application()
+        {
+            // Demonstration of composing functions that take an int and return an IObservable<int> (MutiplyBy10AndAdd1Then2Then3)
+
+            // I don't want the observable chain to run when the subscribes are done.
+            // I want to first wire up a program, complete will all suscriptions, then run it later, so that these are clearly two phases.
+            // To do this I use the factory Create method to make an IObservable, which wen subscriptions happen, will call my delegate with an observer, which I can simply save to call later.
+            IObserver<int> program = null;
+
+            Observable.Create<int>(observer => { program = observer; return Disposable.Empty; })
+#if ALAPushUsingBind
+             .ToWireableObserver()
+#endif
+            .Bind(MutiplyBy10AndAdd1Then2Then3)
+            .Bind(MutiplyBy10AndAdd1Then2Then3)
+            .Bind(MutiplyBy10AndAdd1Then2Then3)
+            .Subscribe((x) => Console.Write($"{x} "),
+                        (ex) => Console.Write($"Exception {ex}"),
+                        () => Console.Write("Complete")
+                        );
+
+            program?.OnNext(0);
+            program?.OnCompleted();
+        }
+
+
+        static IObservable<int> MutiplyBy10AndAdd1Then2Then3(int x)
+        {
+            return Observable.Create<int>(observer=>
+            {
+                observer.OnNext(x * 10 + 1);
+                observer.OnNext(x * 10 + 2);
+                observer.OnNext(x * 10 + 3);
+                return Disposable.Empty;
+            });
+        }
+
 
 #endif
-}
+
+
+#if ALAPushUsingWireIn
+        static void Application()
+        {
+            IObserver<int> program = null;
+
+            // var program1 = new Subject<int>();
+            Observable.Create<int>(observer => { program = observer; return Disposable.Empty; })
+            .ToWrieableObserver()
+            .WireIn(new ObserverMonad<int,int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireIn(new ObserverMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireIn(new ObserverMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .Cast<IObservable<int>>()
+            .Subscribe((x) => Console.Write($"{x} "),
+                        (ex) => Console.Write($"Exception {ex}"),
+                        () => Console.Write("Complete")
+                        );
+
+            program?.OnNext(0);
+            program?.OnCompleted();
+        }
+
+
+        static IObservable<int> MutiplyBy10AndAdd1Then2Then3(int x)
+        {
+            return Observable.Create<int>(observer=>
+            {
+                observer.OnNext(x * 10 + 1);
+                observer.OnNext(x * 10 + 2);
+                observer.OnNext(x * 10 + 3);
+                return Disposable.Empty;
+            });
+        }
+
+
+#endif
+
+
+
+
+
+    }
+
+
+
 
 }
 

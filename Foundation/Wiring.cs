@@ -41,8 +41,7 @@ namespace Foundation
         /// 6. you can overide the above order, or specify the port name explicitly, by giving the port field name in the WireTo method
         /// 7. After a successful wiring, looks for a method with the same name as the port but ending in the word "Initialize".
         ///    Be careful what you do in such a method as the wiring is not yet complete.
-        ///    If the interface just wired conains a C# event, you can use it to register an event handler
-        ///    The Initialize function can also be used with the IWireForward interface to achieve backward wiring of pulling dataflow programming paradigms, while WireTo itself goes in the same direction as the dataflow.
+        ///    If the interface just wired contains a C# event, you can use it to register an event handler
         /// ------------------------------------------------------------------------------------------------------------------
         /// To get diagnostic output of all the wiring put one or more lines like this into your main function before any wiring is done.
         /// Wiring.diagnosticOutput += (s) => Debug.WriteLine(s);
@@ -91,7 +90,7 @@ namespace Foundation
                         AFieldInfo.SetValue(A, B);  // do the wiring
                         wired = true;
                         diagnosticOutput?.Invoke(WiringToString(A, B, AFieldInfo));
-                        PostWiringInitialize(A, AFieldInfo);
+                        Initialize(A, AFieldInfo);
                         break;
                     }
                 }
@@ -116,7 +115,7 @@ namespace Foundation
                         AListFieldValue.GetType().GetMethod("Add").Invoke(AListFieldValue, new[] { B });
                         wired = true;
                         diagnosticOutput?.Invoke(WiringToString(A, B, AFieldInfo));
-                        PostWiringInitialize(A, AFieldInfo);
+                        Initialize(A, AFieldInfo);
                         break;
                     }
                 }
@@ -134,8 +133,8 @@ namespace Foundation
                     if (AfieldInfo?.GetValue(A) != null) throw new Exception($"Port already wired {A.GetType().Name}[{AinstanceName}].{APortName} to {BType.Name}[{BinstanceName}]");
                 }
                 string AFieldsConsidered = string.Join(", ", AfieldInfos.Select(f => $"{f.Name}:{f.FieldType}, {(f.GetValue(A) == null ? "unassigned" : "assigned")}"));
-                string BInterfacesConsidered = string.Join(", ", AfieldInfos.Select(f => $"{f.FieldType}"));
-                throw new Exception($"Failed to wire {A.GetType().Name}[{AinstanceName}].\"{APortName}\" to {BType.Name}[{BinstanceName}]. Considered fields of A [{AFieldsConsidered}]. Considered interfaces of B [{BInterfacesConsidered}].");
+                string BInterfacesConsidered = string.Join(", ", BinterfaceTypes.Select(f => $"{f}"));
+                throw new Exception($"Failed to wire {A.GetType().Name}[{AinstanceName}].\"{APortName}\" to {BType.Name}[{BinstanceName}]. Considered fields of A: {AFieldsConsidered}. Considered interfaces of B: {BInterfacesConsidered}.");
             }
             return A;
         }
@@ -163,16 +162,9 @@ namespace Foundation
         // These portnameInitialize methods are used in domain abstractions to any work that needs doing to complete the wiring, but no more than that as not all the wiring is complete yet
         // The canonical example is an interface that contains a C# event. At the A object end, an event hander typically needs to be registered to the event.
         // The intialize function can do that.
-        // another example is when a wireForward port is used to allow the WireTo to work in the same direction as the dataflow, when the dataflow itself uses ports that are pull type, so they go in the opposite direction.
-        // That is the A object implements the actual data flow interface and the B object has a field of the interface.
-        // if we wired that interface directly, we would end up with using WireTo in the opposite direction of the dataflow. And WireIn would chian from destination to source.
-        // So what you do is add to the A object port that is a field of the WireForward interface and the B object implements that interface.
-        // If the field is called say wireForward, then the A object also has a method called wireForwardInitialize.
-        // This method will get called after the WireForward ports from A to B have been wired. It calls the Push(object o) method on the WireForward interface,
-        // which the B object receives. The B object then wires itself back to the A object.
 
 
-        private static void PostWiringInitialize(object A, FieldInfo AFieldInfo)
+        private static void Initialize(object A, FieldInfo AFieldInfo)
         {
             // see if there is an Initialize function associated with the port and call it.
             var m = A.GetType().GetMethod($"{AFieldInfo.Name}Initialize", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

@@ -4,10 +4,6 @@
 
 using Foundation;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reactive;
-using System.Reactive.Linq;
 using System.Reactive.Disposables;
 
 namespace DomainAbstractions
@@ -21,11 +17,10 @@ namespace DomainAbstractions
 
         public static IObservable<U> Bind<T, U>(this IObservable<T> source, Func<T, IObservable<U>> function)
         {
-            return (IObservable<U>) source.WireInR(new IObservableMonad<T, U>(function));
+            return (IObservable<U>) source.WireInR(new ObservableMonad<T, U>(function));
         }
 
 
-        public static T Cast<T>(this object o) where T : class { return (T)o; }
     }
 
 
@@ -58,13 +53,13 @@ namespace DomainAbstractions
     // It has an output "port", which is the implemented IEnumerable interface, which is wired by the next Bind function.
     // Note that these are wired in the opposite direction to the dataflow. Tht's becasue this is a pull type monad
     // Indeed the ALA version is based on this class. but will be wired up using the WireIn operator instead.
-    class IObservableMonad<T, U> : IObserver<T>, IObservable<U>  // IObservable is the output port, IObserver is used to subscribe to the previous instance
+    class ObservableMonad<T, U> : IObserver<T>, IObservable<U>  // IObservable is the output port, IObserver is used to subscribe to the previous instance
     {
         //------------------------------------------------------------------------
         // implement the constructor
 
         private readonly Func<T, IObservable<U>> function;
-        public IObservableMonad(Func<T, IObservable<U>> function) { this.function = function; }
+        public ObservableMonad(Func<T, IObservable<U>> function) { this.function = function; }
 
 
         private IObservable<T> input;   // This is wired by WireInR to the previous monad object
@@ -86,7 +81,7 @@ namespace DomainAbstractions
         //------------------------------------------------------------------------
         // implement the IObserver
         void IObserver<T>.OnCompleted()
-        {
+         {
             nextObserver.OnCompleted();
         }
 
@@ -98,7 +93,11 @@ namespace DomainAbstractions
         void IObserver<T>.OnNext(T value)
         {
             // Each time we get a value, call this function which returns an IObservable, then subscribe the nextObsever to that IObservable 
-            function(value).Subscribe(nextObserver);
+            function(value).Subscribe(
+                (x) => nextObserver.OnNext(x),
+                (ex) => nextObserver.OnError(ex),
+                () => { }   // intercep OnComplete, we are flattening the output IObservables
+                );
         }
     }
 }

@@ -6,10 +6,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-
-
-
-
 namespace DomainAbstractions
 {
     // extension methods for the EnumerableMonad
@@ -24,7 +20,6 @@ namespace DomainAbstractions
             source.WireToR(em);
             return em;
         }
-
     }
 
 
@@ -61,7 +56,6 @@ namespace DomainAbstractions
         private IEnumerable<T> source;  // main input port. This port is not wired directly by WireTo, but indirectly by the use of the WireForward interface.
 
 
-
         //------------------------------------------------------------------------
         // Implement the IEnumerable interface
 
@@ -74,8 +68,6 @@ namespace DomainAbstractions
         {
             return this;
         }
-
-
 
 
         //------------------------------------------------------------------------
@@ -131,6 +123,4 @@ namespace DomainAbstractions
         }
 
     }
-
-
 }

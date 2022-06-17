@@ -157,6 +157,9 @@ namespace Foundation
             return sb.ToString();
         }
 
+
+
+        // join extension method for IEnumerable<string>
         public static string Join(this IEnumerable<string> strings, string separator)
         {
             return strings.Aggregate(new StringBuilder(), (sb, s) => { if (sb.Length > 0) sb.Append(separator); sb.Append(s); return sb; }).ToString();

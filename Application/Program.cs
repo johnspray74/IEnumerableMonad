@@ -63,11 +63,14 @@
 
 // #define IEnumerableMonad                 // demo of deferred monad using IEnumerable. Bind is in Monad.Enumerable namespace
 // #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
-#define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
+// #define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
 
 // #define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
+
+#define IEnumerableQuery
+// #define IObservableQuery
 
 
 
@@ -83,7 +86,7 @@ using Monad.Enumerable;
 using Monad.ObservableMonad;
 #endif
 
-#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind
+#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IObservableQuery
 using DomainAbstractions;
 using Foundation;
 #endif
@@ -95,6 +98,8 @@ using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Disposables;
+using System.Collections;
+using System.Reactive.Subjects;
 
 namespace Application
 {
@@ -111,7 +116,7 @@ namespace Application
             try
             {
                 Debug.WriteLine("The application has started");
-#if ALAPullUsingWireIn || ALAPushUsingWireIn
+#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IObservableQuery  // ALA Wiring being used
                 Wiring.diagnosticOutput += (s) => Debug.WriteLine(s);
 #endif
                 Application();
@@ -221,13 +226,9 @@ namespace Application
         static void Application()
         {
             // Demonstration of composing functions that take an int and return an IObservable<int> (MutiplyBy10AndAdd1Then2Then3)
+            // using a Bind function function
 
-            // I don't want the observable chain to run when the source is subscribed to.
-            // I want to first wire up a program, then run it later, so that these are clearly two phases.
-            // To do this I use the factory Create method to make an IObservable, which when it is subscribed to, will call my delegate with an observer, which I can simply save to call later.
-            IObserver<int> program = null;
-
-            Observable.Create<int>(observer => { program = observer; return Disposable.Empty; })
+            Observable.Create<int>(observer => { observer.OnNext(0); observer.OnCompleted();  return Disposable.Empty; })
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3)
@@ -235,9 +236,6 @@ namespace Application
                         (ex) => Console.Write($"Exception {ex}"),
                         () => Console.Write("Complete")
                         );
-
-            program?.OnNext(0);
-            program?.OnCompleted();
         }
 
 
@@ -259,20 +257,14 @@ namespace Application
 #if ALAPushUsingWireIn
         static void Application()
         {
-            IObserver<int> program = null;
+            var program = (ObservableToConsoleOutput<int>)
+            new ValueToObservable<int>(0)
+            .WireInR(new ObservableMonad<int,int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new ObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new ObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new ObservableToConsoleOutput<int>());
 
-            Observable.Create<int>(observer => { program = observer; return Disposable.Empty; })
-            .WireInR(new IObservableMonad<int,int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new IObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new IObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .Cast<IObservable<int>>()  // because WireInR returns an object
-            .Subscribe((x) => Console.Write($"{x} "),
-                        (ex) => Console.Write($"Exception {ex}"),
-                        () => Console.Write("Complete")
-                        );
-
-            program?.OnNext(0);
-            program?.OnCompleted();
+            program.Run();
         }
 
 
@@ -283,6 +275,7 @@ namespace Application
                 observer.OnNext(x * 10 + 1);
                 observer.OnNext(x * 10 + 2);
                 observer.OnNext(x * 10 + 3);
+                observer.OnCompleted();
                 return Disposable.Empty;
             });
         }
@@ -291,14 +284,86 @@ namespace Application
 #endif
 
 
+#if IEnumerableQuery
+        // This domonstrates use of LINQ in an ALA application
+        // The EnumerableQuery domain abstraction accepts a LINQ query as its configuration
 
+
+        static void Application()
+        {
+            var proxySource1 = new EnumerableProxySource<int>();
+            var query1 = proxySource1.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 1);
+            var proxySource2 = new EnumerableProxySource<int>();
+            var query2 = proxySource2.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 2);
+            var proxySource3 = new EnumerableProxySource<int>();
+            var query3 = proxySource3.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 3);
+
+
+            // Now create an ALA program using the domain abstraction, Query
+            var program = (EnumerableToConsoleOutput<int>)
+            new List<int> { 0 }
+            .WireInR(new EnumerableQuery<int, int>(proxySource1, query1) { instanceName = "Query1" })
+            .WireInR(new EnumerableQuery<int, int>(proxySource2, query2) { instanceName = "Query2" })
+            .WireInR(new EnumerableQuery<int, int>(proxySource3, query3) { instanceName = "Query3" })
+            .WireInR(new EnumerableToConsoleOutput<int>());
+
+            program.Run();
+
+        }
+
+        private static IEnumerable<int> MutiplyBy10AndAdd1Then2Then3(int x)
+        {
+            yield return x * 10 + 1;
+            yield return x * 10 + 2;
+            yield return x * 10 + 3;
+        }
+
+
+
+#endif
+
+
+
+#if IObservableQuery
+        // This domonstrates use of LINQ in an ALA application
+        // The ObservableQuery domain abstraction accepts a LINQ query as its configuration
+        // Build the LINQ query starting with a subject
+        // pass both the subject and the query to the domain abstraction's constructor to configure it
+        static void Application()
+        {
+            var subject1 = new Subject<int>();
+            var query1 = subject1.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 1);
+            var subject2 = new Subject<int>();
+            var query2 = subject2.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 2);
+            var subject3 = new Subject<int>();
+            var query3 = subject3.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 3);
+
+            var program = (ObservableToConsoleOutput<int>)
+            new ValueToObservable<int>(0)
+            .WireInR(new ObservableQuery<int, int>(subject1, query1))
+            .WireInR(new ObservableQuery<int, int>(subject2, query2))
+            .WireInR(new ObservableQuery<int, int>(subject3, query3))
+            .WireInR(new ObservableToConsoleOutput<int>());
+
+            program.Run();
+        }
+
+
+        static IObservable<int> MutiplyBy10AndAdd1Then2Then3(int x)
+        {
+            return Observable.Create<int>(observer =>
+            {
+                observer.OnNext(x * 10 + 1);
+                observer.OnNext(x * 10 + 2);
+                observer.OnNext(x * 10 + 3);
+                // observer.OnCompleted();
+                return Disposable.Empty;
+            });
+        }
+#endif
 
 
     }
-
-
-
-
 }
 
 

@@ -59,7 +59,7 @@
 
 
 // uncomment one of the following variations
-// #define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
+#define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
 
 // #define IEnumerableMonad                 // demo of deferred monad using IEnumerable. Bind is in Monad.Enumerable namespace
 // #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
@@ -69,7 +69,7 @@
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
-#define IEnumerableQuery
+// #define IEnumerableQuery
 // #define IObservableQuery
 
 
@@ -88,9 +88,10 @@ using Monad.ObservableMonad;
 
 #if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IObservableQuery
 using DomainAbstractions;
-using Foundation;
 #endif
 
+
+using Foundation;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -59,7 +59,7 @@
 
 
 // uncomment one of the following variations
-#define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
+// #define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
 
 // #define IEnumerableMonad                 // demo of deferred monad using IEnumerable. Bind is in Monad.Enumerable namespace
 // #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
@@ -70,6 +70,7 @@
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
 // #define IEnumerableQuery
+#define IEnumerableQuery2
 // #define IObservableQuery
 
 
@@ -86,7 +87,7 @@ using Monad.Enumerable;
 using Monad.ObservableMonad;
 #endif
 
-#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IObservableQuery
+#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery
 using DomainAbstractions;
 #endif
 
@@ -117,7 +118,7 @@ namespace Application
             try
             {
                 Debug.WriteLine("The application has started");
-#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IObservableQuery  // ALA Wiring being used
+#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery  // ALA Wiring being used
                 Wiring.diagnosticOutput += (s) => Debug.WriteLine(s);
 #endif
                 Application();
@@ -323,6 +324,36 @@ namespace Application
 
 #endif
 
+#if IEnumerableQuery2
+        // This domonstrates use of LINQ in an ALA application
+        // The EnumerableQuery domain abstraction accepts a LINQ query as its configuration
+
+
+        static void Application()
+        {
+            var proxySource1 = new EnumerableProxySource<int>();
+            var query1 = proxySource1.SelectMany(x => new[] { x * 10 + 1, x * 10 + 2, x * 10 + 3 }).Select(x => x + 1);
+            var proxySource2 = new EnumerableProxySource<int>();
+            var query2 = proxySource2.SelectMany(x => new[] { x * 10 + 1, x * 10 + 2, x * 10 + 3 }).Select(x => x + 2);
+            var proxySource3 = new EnumerableProxySource<int>();
+            var query3 = proxySource3.SelectMany(x => new[] { x * 10 + 1, x * 10 + 2, x * 10 + 3 }).Select(x => x + 3);
+
+
+            // Now create an ALA program using the domain abstraction, Query
+            var program = (EnumerableToConsoleOutput<int>)
+            new List<int> { 0 }
+            .WireInR(new EnumerableQuery<int, int>(proxySource1, query1) { instanceName = "Query1" })
+            .WireInR(new EnumerableQuery<int, int>(proxySource2, query2) { instanceName = "Query2" })
+            .WireInR(new EnumerableQuery<int, int>(proxySource3, query3) { instanceName = "Query3" })
+            .WireInR(new EnumerableToConsoleOutput<int>());
+
+            program.Run();
+
+        }
+
+
+
+#endif
 
 
 #if IObservableQuery

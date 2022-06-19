@@ -27,8 +27,8 @@ namespace Monad.Enumerable
 
 #else
 
-        // Bind would normall be implemented like this, but since the yield return causes the complier to generate the actual code that does the work
-        // and our purpose here is to show how Bind works, we provide the version above which uses a class which is baically what the comiler would have generated when it saw the yield return keywords.
+        // Bind would normally be implemented like this, but since the yield return causes the complier to generate the actual code that does the work
+        // and our purpose here is to show how Bind works, we provide the version above which uses a class which is basically what the comiler would have generated when it saw the yield return keywords.
         public static IEnumerable<U> Bind<T, U>(this IEnumerable<T> source, Func<T, IEnumerable<U>> function)
         {
             foreach (var t in source)
@@ -75,8 +75,6 @@ namespace Monad.Enumerable
         public EnumerableMonad(IEnumerable<T> source, Func<T, IEnumerable<U>> function) { this.source = source; this.function = function; }
 
 
-
-
         //------------------------------------------------------------------------
         // Implement the IEnumerable interface
 
@@ -91,11 +89,8 @@ namespace Monad.Enumerable
         }
 
 
-
-
         //------------------------------------------------------------------------
         // Implement the IEnumertor interface
-
 
         // These two fields define our state
         // The first one can have a state of null, which is the state before we got the first value, otherwise it holds the state as we go through the source IEnumerator
@@ -103,7 +98,6 @@ namespace Monad.Enumerable
         
         // This holds the state as we go through IEnumerator returned from the function
         private IEnumerator<U> functionEnumerator = null;  // The current IEnumerator returned from the function
-
 
         U IEnumerator<U>.Current => functionEnumerator.Current;   // If the output has already used MoveNext and returned true, there wil always be a current value sitting in the functionEnumerator
 

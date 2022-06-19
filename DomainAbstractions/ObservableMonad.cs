@@ -96,7 +96,7 @@ namespace DomainAbstractions
             function(value).Subscribe(
                 (x) => nextObserver.OnNext(x),
                 (ex) => nextObserver.OnError(ex),
-                () => { }   // intercep OnComplete, we are flattening the output IObservables
+                () => { Console.WriteLine("#"); }   // intercep OnComplete, we are combining the IObservables from the function
                 );
         }
     }

@@ -65,13 +65,13 @@
 // #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
 // #define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
 
-// #define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
+#define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
-// #define IEnumerableQuery
-#define IEnumerableQuery2
-// #define IObservableQuery
+// #define IEnumerableQuery                 // demo of using LINQ and ALA together
+// #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
+// #define IObservableQuery                 // demo or Reactive Extensions and ALA together
 
 
 
@@ -248,6 +248,7 @@ namespace Application
                 observer.OnNext(x * 10 + 1);
                 observer.OnNext(x * 10 + 2);
                 observer.OnNext(x * 10 + 3);
+                observer.OnCompleted();
                 return Disposable.Empty;
             });
         }
@@ -327,6 +328,7 @@ namespace Application
 #if IEnumerableQuery2
         // This domonstrates use of LINQ in an ALA application
         // The EnumerableQuery domain abstraction accepts a LINQ query as its configuration
+        // This time we use a simpler lambda expression for SelectMany
 
 
         static void Application()
@@ -388,7 +390,7 @@ namespace Application
                 observer.OnNext(x * 10 + 1);
                 observer.OnNext(x * 10 + 2);
                 observer.OnNext(x * 10 + 3);
-                // observer.OnCompleted();
+                observer.OnCompleted();
                 return Disposable.Empty;
             });
         }

@@ -1,4 +1,4 @@
-﻿#define UseCreate
+﻿// #define UseCreate
 
 
 
@@ -113,8 +113,11 @@ namespace Monad.ObservableMonad
 
             void IObserver<T>.OnNext(T value)
             {
-                // Each time we get 
-                function(value).Subscribe(output);
+                function(value).Subscribe(
+                    (x) => output.OnNext(x),
+                    (ex) => output.OnError(ex),
+                    () => { }   // intercep OnComplete, we are combining the IObservables from the function
+                );
             }
         }
 

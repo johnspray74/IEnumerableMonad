@@ -1,7 +1,4 @@
-﻿
-
-
-using Foundation;
+﻿using Foundation;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -121,6 +118,5 @@ namespace DomainAbstractions
             functionEnumerator = null;
             sourceEnumerator = null;
         }
-
     }
 }

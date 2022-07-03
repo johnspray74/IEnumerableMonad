@@ -65,7 +65,8 @@
 // #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
 // #define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
 
-#define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
+// #define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
+#define IObservableMonad2                // demo of deferred monad using IObserable. Bind takes an Action parameter instead of a function
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
@@ -85,6 +86,10 @@ using Monad.Enumerable;
 
 #if IObservableMonad
 using Monad.ObservableMonad;
+#endif
+
+#if IObservableMonad2
+using Monad.ObservableMonad2;
 #endif
 
 #if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery
@@ -173,6 +178,7 @@ namespace Application
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3);
 
+            Console.WriteLine(program.ObjectStructureToString(0));
             var result = program.ToList();  // now run the program
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
@@ -255,6 +261,40 @@ namespace Application
 
 
 #endif
+
+
+
+
+#if IObservableMonad2
+        static void Application()
+        {
+            // Demonstration of composing functions that take an int and return an IObservable<int> (MutiplyBy10AndAdd1Then2Then3)
+            // using a Bind function function
+
+            Observable.Create<int>(observer => { observer.OnNext(0); observer.OnCompleted();  return Disposable.Empty; })
+            .Bind<int,int>(MutiplyBy10AndAdd1Then2Then3)
+            .Bind<int,int>(MutiplyBy10AndAdd1Then2Then3)
+            .Bind<int,int>(MutiplyBy10AndAdd1Then2Then3)
+            .Subscribe((x) => Console.Write($"{x} "),
+                        (ex) => Console.Write($"Exception {ex}"),
+                        () => Console.Write("Complete")
+                        );
+        }
+
+
+        static void MutiplyBy10AndAdd1Then2Then3(int x, IObserver<int> observer)
+        {
+                observer.OnNext(x * 10 + 1);
+                observer.OnNext(x * 10 + 2);
+                observer.OnNext(x * 10 + 3);
+                observer.OnCompleted();
+        }
+
+
+#endif
+
+
+
 
 
 #if ALAPushUsingWireIn

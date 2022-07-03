@@ -18,13 +18,15 @@ namespace Foundation
     {
 
 
-        public static string ObjectStructureToString<T>(this T instance) where T : class
+        public static string ObjectStructureToString<T>(this T instance, int depth) where T : class
         {
-
             if (instance == null)
                 return string.Empty;
 
             StringBuilder sb = new StringBuilder();
+            try
+            {
+
             sb.Append("Class ");
 
             var type = instance.GetType();
@@ -80,7 +82,6 @@ namespace Foundation
                     // Ssb.Append(name + " ");
                     if (handledTypes.Contains(fieldInfo.FieldType))
                     {
-
                         if (fieldInfo.GetValue(instance) != null)
                         {
                             var s = arrayTypes.Contains(fieldInfo.FieldType)
@@ -95,8 +96,15 @@ namespace Foundation
                     }
                     else if (typeof(object).IsAssignableFrom(fieldInfo.FieldType))
                     {
-                        sb.AppendLine();
-                        sb.Append(fieldInfo.GetValue(instance).ObjectStructureToString().Indent());
+                        if (depth == 6)
+                        {
+                            sb.AppendLine("Too deep");
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                            sb.Append(fieldInfo.GetValue(instance).ObjectStructureToString(depth + 1).Indent());
+                        }
                     }
                     else
                     {
@@ -111,6 +119,11 @@ namespace Foundation
                 try
                 {
 
+                    if (propertyInfo.Name.Split(".").Last()=="Current") // For some reason GetValue of the "Current" property of the IEnumerator exception is not caught.
+                        {
+                            sb.AppendLine("Skipped GetValue");
+                        }
+                        else
                     if (propertyInfo.GetValue(instance, null) == null)
                     {
                         sb.AppendLine("null");
@@ -135,6 +148,11 @@ namespace Foundation
                     sb.Append("Method ");
                     sb.AppendLine(methodInfo.ToString());
                 }
+            }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception in ObjectToString {e}");
             }
             return sb.ToString();
 

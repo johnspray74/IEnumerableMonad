@@ -18,14 +18,7 @@ namespace Monad.Enumerable
     public static class MonadExtensionMethods
     {
 
-#if !UseYieldReturn
-
-        public static IEnumerable<U> Bind<T, U>(this IEnumerable<T> source, Func<T, IEnumerable<U>> function)
-        {
-            return new EnumerableMonad<T, U>(source, function);
-        }
-
-#else
+#if UseYieldReturn
 
         // Bind would normally be implemented like this, but since the yield return causes the complier to generate the actual code that does the work
         // and our purpose here is to show how Bind works, we provide the version above which uses a class which is basically what the comiler would have generated when it saw the yield return keywords.
@@ -39,6 +32,13 @@ namespace Monad.Enumerable
                     yield return u;
                 }
             }
+        }
+
+#else
+
+        public static IEnumerable<U> Bind<T, U>(this IEnumerable<T> source, Func<T, IEnumerable<U>> function)
+        {
+            return new EnumerableMonad<T, U>(source, function);
         }
 
 #endif

@@ -14,7 +14,7 @@ namespace Foundation
     // TBD, detect of we have visted an object before to avoid duplication, or worse an infinite loop
 
 
-    public static class FoundationExtensionMethods
+    public static partial class FoundationExtensionMethods
     {
 
 
@@ -27,139 +27,141 @@ namespace Foundation
             try
             {
 
-            sb.Append("Class ");
+                sb.Append("Class ");
 
-            var type = instance.GetType();
+                var type = instance.GetType();
 
-            var typeName = type.Name;
-            sb.Append(typeName);
-            var instanceProperty = type.GetProperty("instanceName");
-            if (instanceProperty != null)
-            {
-                sb.Append($" \"{instanceProperty.GetValue(instance)}\"");
-            }
-            if (instance.GetType().IsGenericType) sb.Append(" (Generic)");
-
-            sb.AppendLine();
-            sb.AppendLine(new string('=', sb.Length));
-
-
-            var strListType = typeof(List<string>);
-            var strArrType = typeof(string[]);
-
-            var arrayTypes = new[] { strListType, strArrType };
-            var handledTypes = new[] { typeof(Int32), typeof(String), typeof(bool), typeof(DateTime), typeof(double), typeof(decimal), strListType, strArrType };
-
-
-
-            var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            var fieldInfos = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            var methodInfos = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-            /*
-            var max = 0;
-            if (propertyInfos.Length >  0)
-            {
-                max = propertyInfos.Select((p) => p.Name.Length).Max();
-            }
-            if (fieldInfos.Length > 0)
-            {
-                var max2 = fieldInfos.Select((p) => p.Name.Length).Max();
-                if (max2 > max) max = max2;
-            }
-            */
-
-            foreach (var fieldInfo in fieldInfos)
-            {
-                string[] strings = { "_methodBase", "_methodPtr", "_methodPtrAux" };
-
-                var name = fieldInfo.Name;
-                if (!strings.Contains(name))
+                var typeName = type.Name;
+                sb.Append(typeName);
+                var instanceProperty = type.GetProperty("instanceName");
+                if (instanceProperty != null)
                 {
-                    sb.Append("Field ");
-                    sb.Append(fieldInfo.ToString() + " ");
-                    // sb.Append(fieldInfo.FieldType + " ");
-                    // Ssb.Append(name + " ");
-                    if (handledTypes.Contains(fieldInfo.FieldType))
+                    sb.Append($" \"{instanceProperty.GetValue(instance)}\"");
+                }
+                if (instance.GetType().IsGenericType) sb.Append(" (Generic)");
+
+                sb.AppendLine();
+                sb.AppendLine(new string('=', sb.Length));
+
+
+                var strListType = typeof(List<string>);
+                var strArrType = typeof(string[]);
+
+                var arrayTypes = new[] { strListType, strArrType };
+                var handledTypes = new[] { typeof(Int32), typeof(String), typeof(bool), typeof(DateTime), typeof(double), typeof(decimal), strListType, strArrType };
+
+
+
+                var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var fieldInfos = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var methodInfos = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+                /*
+                var max = 0;
+                if (propertyInfos.Length >  0)
+                {
+                    max = propertyInfos.Select((p) => p.Name.Length).Max();
+                }
+                if (fieldInfos.Length > 0)
+                {
+                    var max2 = fieldInfos.Select((p) => p.Name.Length).Max();
+                    if (max2 > max) max = max2;
+                }
+                */
+
+                foreach (var fieldInfo in fieldInfos)
+                {
+                    string[] strings = { "_methodBase", "_methodPtr", "_methodPtrAux" };
+
+                    var name = fieldInfo.Name;
+                    if (!strings.Contains(name))
                     {
-                        if (fieldInfo.GetValue(instance) != null)
+                        sb.Append("Field ");
+                        sb.Append(fieldInfo.ToString() + " ");
+                        // sb.Append(fieldInfo.FieldType + " ");
+                        // Ssb.Append(name + " ");
+                        if (handledTypes.Contains(fieldInfo.FieldType))
                         {
-                            var s = arrayTypes.Contains(fieldInfo.FieldType)
-                                ? string.Join(", ", (IEnumerable<string>)fieldInfo.GetValue(instance))
-                                : fieldInfo.GetValue(instance).ToString();
-                            sb.AppendLine(s);
+                            if (fieldInfo.GetValue(instance) != null)
+                            {
+                                var s = arrayTypes.Contains(fieldInfo.FieldType)
+                                    ? string.Join(", ", (IEnumerable<string>)fieldInfo.GetValue(instance))
+                                    : fieldInfo.GetValue(instance).ToString();
+                                sb.AppendLine(s);
+                            }
+                            else
+                            {
+                                sb.AppendLine("null");
+                            }
+                        }
+                        else if (typeof(object).IsAssignableFrom(fieldInfo.FieldType))
+                        {
+                            if (depth == 6)
+                            {
+                                sb.AppendLine("Too deep");
+                            }
+                            else
+                            {
+                                sb.AppendLine();
+                                sb.Append(fieldInfo.GetValue(instance).ObjectStructureToString(depth + 1).Indent());
+                            }
                         }
                         else
                         {
-                            sb.AppendLine("null");
+                            sb.AppendLine("GetValue not supported");
                         }
-                    }
-                    else if (typeof(object).IsAssignableFrom(fieldInfo.FieldType))
-                    {
-                        if (depth == 6)
-                        {
-                            sb.AppendLine("Too deep");
-                        }
-                        else
-                        {
-                            sb.AppendLine();
-                            sb.Append(fieldInfo.GetValue(instance).ObjectStructureToString(depth + 1).Indent());
-                        }
-                    }
-                    else
-                    {
-                        sb.AppendLine("GetValue not supported");
                     }
                 }
-            }
-            foreach (var propertyInfo in propertyInfos)
-            {
-                sb.Append("Property ");
-                sb.Append(propertyInfo.ToString() + " ");
-                try
+                foreach (var propertyInfo in propertyInfos)
                 {
+                    sb.Append("Property ");
+                    sb.Append(propertyInfo.ToString() + " ");
+                    try
+                    {
 
-                    if (propertyInfo.Name.Split(".").Last()=="Current") // For some reason GetValue of the "Current" property of the IEnumerator exception is not caught.
+                        if (propertyInfo.Name.Split(".").Last() == "Current") // For some reason GetValue of the "Current" property of the IEnumerator exception is not caught.
                         {
                             sb.AppendLine("Skipped GetValue");
                         }
                         else
-                    if (propertyInfo.GetValue(instance, null) == null)
-                    {
-                        sb.AppendLine("null");
+                        if (propertyInfo.GetValue(instance, null) == null)
+                        {
+                            sb.AppendLine("null");
+                        }
+                        else
+                        {
+                            var s = arrayTypes.Contains(propertyInfo.PropertyType)
+                                    ? string.Join(", ", (IEnumerable<string>)propertyInfo.GetValue(instance, null))
+                                    : propertyInfo.GetValue(instance, null);
+                            sb.AppendLine();
+                        }
                     }
-                    else
+                    catch
                     {
-                        var s = arrayTypes.Contains(propertyInfo.PropertyType)
-                                ? string.Join(", ", (IEnumerable<string>)propertyInfo.GetValue(instance, null))
-                                : propertyInfo.GetValue(instance, null);
-                        sb.AppendLine();
+                        sb.AppendLine("Exception getting value");
                     }
                 }
-                catch
+                foreach (var methodInfo in methodInfos)
                 {
-                    sb.AppendLine("Exception getting value");
+                    if (methodInfo.Name[0] == '<')
+                    {
+                        sb.Append("Method ");
+                        sb.AppendLine(methodInfo.ToString());
+                    }
                 }
-            }
-            foreach (var methodInfo in methodInfos)
-            {
-                if (methodInfo.Name[0] == '<')
-                {
-                    sb.Append("Method ");
-                    sb.AppendLine(methodInfo.ToString());
-                }
-            }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception in ObjectToString {e}");
+                sb.AppendLine("Exception in ObjectToString {e}");
             }
             return sb.ToString();
 
         }
 
 
-        public static string Indent(this string s)
+
+
+        private static string Indent(this string s)
         {
             bool first = true;
             StringBuilder sb = new StringBuilder();
@@ -177,11 +179,67 @@ namespace Foundation
 
 
 
-        // join extension method for IEnumerable<string>
-        public static string Join(this IEnumerable<string> strings, string separator)
+        // override ToString for reference objects to return the property's value instead of the class name
+        public static string ClassToString<T>(this T instance) where T : class
         {
-            return strings.Aggregate(new StringBuilder(), (sb, s) => { if (sb.Length > 0) sb.Append(separator); sb.Append(s); return sb; }).ToString();
-        }
+            if (instance == null)
+                return string.Empty;
 
+            StringBuilder sb = new StringBuilder();
+            try
+            {
+                var type = instance.GetType();
+
+                var typeName = type.Name;
+                sb.Append(typeName);
+                sb.Append(" ");
+                if (instance.GetType().IsGenericType) sb.Append(" (Generic)");
+
+                sb.Append("{");
+
+                var strListType = typeof(List<string>);
+                var strArrType = typeof(string[]);
+
+                var arrayTypes = new[] { strListType, strArrType };
+                var handledTypes = new[] { typeof(Int32), typeof(String), typeof(bool), typeof(DateTime), typeof(double), typeof(decimal), strListType, strArrType };
+
+                var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var fieldInfos = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+                bool first = true;
+                foreach (var propertyInfo in propertyInfos)
+                {
+                    if (!first) sb.Append(", ");
+                    first = false;
+                    sb.Append(propertyInfo.Name + "=");
+                    try
+                    {
+                        if (propertyInfo.GetValue(instance, null) == null)
+                        {
+                            sb.Append("null");
+                        }
+                        else
+                        {
+                            var s = arrayTypes.Contains(propertyInfo.PropertyType)
+                                    ? string.Join(", ", (IEnumerable<string>)propertyInfo.GetValue(instance, null))
+                                    : propertyInfo.GetValue(instance, null);
+                            sb.Append(s);
+                        }
+                    }
+                    catch
+                    {
+                        sb.Append("Exception getting value");
+                    }
+                }
+                sb.Append("}");
+            }
+            catch (Exception e)
+            {
+                sb.AppendLine("Exception in ToString<T>() where T : class {e}");
+            }
+            return sb.ToString();
+
+
+        }
     }
 }

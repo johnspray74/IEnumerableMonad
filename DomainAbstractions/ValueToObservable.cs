@@ -15,7 +15,7 @@ namespace DomainAbstractions
 
         IDisposable IObservable<T>.Subscribe(IObserver<T> observer)
         {
-            return Observable.Create<T>(observer =>
+           return Observable.Create<T>(observer =>
            {
                observer.OnNext(value); 
                observer.OnCompleted();
@@ -24,4 +24,11 @@ namespace DomainAbstractions
         }
 
     }
+
+
+    static class ValueToObservableExtensionMethods
+    {
+        static public ValueToObservable<T> ToObservable<T>(this T value) { return new ValueToObservable<T>(value); }
+    }
+
 }

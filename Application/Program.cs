@@ -66,7 +66,7 @@
 // #define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
 
 // #define IObservableMonad                 // demo of deferred monad using IObserable. Bind is in Monad.ObservableMonad namespace
-#define IObservableMonad2                // demo of deferred monad using IObserable. Bind takes an Action parameter instead of a function
+// #define IObservableMonad2                // demo of deferred monad using IObserable. Bind takes an Action parameter instead of a function
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
@@ -74,6 +74,7 @@
 // #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
 // #define IObservableQuery                 // demo or Reactive Extensions and ALA together
 
+#define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
 
 
 #if ListMonad
@@ -92,12 +93,13 @@ using Monad.ObservableMonad;
 using Monad.ObservableMonad2;
 #endif
 
-#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery
+#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery || IObservableChain
 using DomainAbstractions;
 #endif
 
 
 using Foundation;
+using Library;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -123,9 +125,7 @@ namespace Application
             try
             {
                 Debug.WriteLine("The application has started");
-#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery  // ALA Wiring being used
                 Wiring.diagnosticOutput += (s) => Debug.WriteLine(s);
-#endif
                 Application();
                 Debug.WriteLine("The application has finished");
                 return 0;
@@ -437,8 +437,37 @@ namespace Application
 #endif
 
 
+
+
+#if IObservableChain
+        static void Application()
+        {
+            var outputer =
+            // new { Name = "Fred Person", Number = 99 }
+            // .ToObservable()
+            ((IObservable<DataType>)new CSVFileReaderWriter<DataType>() { FilePath = "DataFile1.txt" })
+            // .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number+1 } )
+            // .Where(x => x.Number>0)
+            .ToOutput();
+
+            outputer.output += Console.Write;
+
+            var program = new StartEvent().WireTo(outputer);
+            program.Run();
+        }
+
+
+        private class DataType
+        {
+            public string Name { get; set; }
+            public int Number { get; set; }
+        }
+#endif
     }
+
 }
+
+
 
 
 

@@ -446,8 +446,8 @@ namespace Application
             // new { Name = "Fred Person", Number = 99 }
             // .ToObservable()
             ((IObservable<DataType>)new CSVFileReaderWriter<DataType>() { FilePath = "DataFile1.txt" })
-            // .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number+1 } )
-            // .Where(x => x.Number>0)
+            .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number+1 } )
+            .Where(x => x.Number>48)
             .ToOutput();
 
             outputer.output += Console.Write;

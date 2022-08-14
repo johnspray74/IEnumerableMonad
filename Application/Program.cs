@@ -74,7 +74,9 @@
 // #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
 // #define IObservableQuery                 // demo or Reactive Extensions and ALA together
 
-#define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
+// #define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
+#define IObservableChainDynamic             // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads
+
 
 
 #if ListMonad
@@ -93,7 +95,7 @@ using Monad.ObservableMonad;
 using Monad.ObservableMonad2;
 #endif
 
-#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery || IObservableChain
+#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery || IObservableChain || IObservableChainDynamic
 using DomainAbstractions;
 #endif
 
@@ -109,6 +111,8 @@ using System.Reactive.Linq;
 using System.Reactive.Disposables;
 using System.Collections;
 using System.Reactive.Subjects;
+using System.Dynamic;
+using ProgrammingParadigms;
 
 namespace Application
 {
@@ -244,6 +248,8 @@ namespace Application
                         (ex) => Console.Write($"Exception {ex}"),
                         () => Console.Write("Complete")
                         );
+            Console.WriteLine();
+            Console.WriteLine("Note: # are written out in Bind where it intercepted OnCompeted calls were intecepted to effect joining all the observables into a single observable");
         }
 
 
@@ -446,8 +452,8 @@ namespace Application
             // new { Name = "Fred Person", Number = 99 }
             // .ToObservable()
             ((IObservable<DataType>)new CSVFileReaderWriter<DataType>() { FilePath = "DataFile1.txt" })
-            .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number+1 } )
-            .Where(x => x.Number>48)
+            .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number + 1 })
+            .Where(x => x.Number > 48)
             .ToOutput();
 
             outputer.output += Console.Write;
@@ -463,6 +469,47 @@ namespace Application
             public int Number { get; set; }
         }
 #endif
+
+
+#if IObservableChainDynamic
+        static void Application()
+        {
+            var csvrw = new CSVFileReaderWriter() { FilePath = "DataFile2.txt" };
+            IObserverPush<ExpandoObject> writer = csvrw;
+            writer.OnStart();
+
+            dynamic eo = new ExpandoObject();
+            eo.Number = 47; 
+            eo.Name = "Jack Up";
+            writer.OnNext(eo);
+
+            eo.Number = 48;
+            eo.Name = "Wynn Takeall";
+            writer.OnNext(eo);
+
+            eo.Number = 49;
+            eo.Name = "Rich Busted";
+            writer.OnNext(eo);
+
+            writer.OnCompleted();
+
+            var outputer = new ObservableToOutput<ExpandoObject>();
+            // outputer.source =
+            ((IObservable<dynamic>)csvrw)
+                // .Sniff()
+                .Select(x => new { Firstname = ((string)x.Name).SubWord(0), Number = x.Number + 1 })
+                // .Sniff()
+                .Where(x => x.Number > 48)
+                .Sniff()
+                .WireInR(outputer);
+
+            outputer.output += Console.Write;
+
+            var program = new StartEvent().WireTo(outputer);
+            program.Run();
+        }
+#endif
+
     }
 
 }

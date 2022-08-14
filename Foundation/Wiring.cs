@@ -51,6 +51,54 @@ namespace Foundation
         /// </remarks>
         public static T WireTo<T>(this T A, object B, string APortName = null)
         {
+            Wire<T>(A, B, false, APortName);
+            return A;
+        }
+
+        /// <summary>
+        /// Same as WireTo except that it return the second object to support composing a chain of instances of abstractions without nested syntax
+        /// e.g. new A().WireIn(new B()).WireIn(new C());
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="A">first object being wired</param>
+        /// <param name="B">second object being wired</param>
+        /// <param name="APortName">port fieldname in the A object (optional)</param>
+        /// <returns>B to support fluent programming style which allows wiring a chain of objects within .WireIn operators</returns>
+        public static object WireIn<T>(this T A, object B, string APortName = null)
+        {
+            Wire(A, B, false, APortName);
+            return B;
+        }
+
+
+        // Some programming paradigm interfaces that we want to use need to be wired in the reverse direction from out average ALA push based dataflows.
+        // The B object has the field and the A object implements it.
+        // But the dataflow direction is from A to B, so we want to use WireTo or WireIn in the same direction as the dataflow.
+        // These two Wiring methods reverse the wiring.
+        // WireTo still returns the A object to support easy wiring of one object to many
+        // WireIn still returns the B object to support chaining of operations
+
+        public static object WireToR<T>(this T A, object B, string APortName = null)
+        {
+            Wire(B, A, false, APortName);
+            return A;
+        }
+
+
+        public static object WireInR<T>(this T A, object B, string APortName = null)
+        {
+            Wire(B, A, false, APortName);
+            return B;
+        }
+
+
+
+
+
+
+
+        private static bool Wire<T>(this T A, object B, bool JustTestIfCanBeWired, string APortName = null)
+        {
             // achieve the following via reflection
             // A.field = B; 
             // provided 1) field is private,
@@ -70,10 +118,10 @@ namespace Foundation
 
             // first get a list of private fields in object A (matching the name if given) and an array of implemented interfaces of object B
             // do the reflection once
-            var BType = B.GetType();
             var AfieldInfos = A.GetType().GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 .Where(fi => fi.FieldType.IsInterface || fi.FieldType.IsGenericType && typeof(System.Collections.IEnumerable).IsAssignableFrom(fi.FieldType))   // filter for fields of interface type
                 .Where(fi => APortName == null || fi.Name == APortName); // filter for given portname (if any) 
+            var BType = B.GetType();
             var BinterfaceTypes = BType.GetInterfaces().ToList(); // do the reflection once
 
 
@@ -85,12 +133,17 @@ namespace Foundation
                 {
                     // Is the field unassigned and type matches one of the interfaces of B
                     var BImplementedInterface = BinterfaceTypes.FirstOrDefault(interfaceType => AFieldInfo.FieldType == interfaceType);
+                    // If no exactly matching type then take anything that is assignable e.g. IObservable<object> can be assigned an IObservable<AnyClass>
+                    if (BImplementedInterface == null) BImplementedInterface = BinterfaceTypes.FirstOrDefault(interfaceType => AFieldInfo.FieldType.IsAssignableFrom(interfaceType));
                     if (BImplementedInterface != null)  // there is a matching interface
                     {
-                        AFieldInfo.SetValue(A, B);  // do the wiring
+                        if (!JustTestIfCanBeWired)
+                        {
+                            AFieldInfo.SetValue(A, B);  // do the wiring
+                            diagnosticOutput?.Invoke(WiringToString(A, B, AFieldInfo));
+                            Initialize(A, AFieldInfo);
+                        }
                         wired = true;
-                        diagnosticOutput?.Invoke(WiringToString(A, B, AFieldInfo));
-                        Initialize(A, AFieldInfo);
                         break;
                     }
                 }
@@ -100,80 +153,78 @@ namespace Foundation
                 if (fieldType.IsGenericType && typeof(System.Collections.IEnumerable).IsAssignableFrom(fieldType))
                 {
                     var AGenericArgument = AFieldInfo.FieldType.GetGenericArguments()[0];
-                    var BImplementedInterface = BinterfaceTypes.FirstOrDefault(interfaceType => AGenericArgument.IsAssignableFrom(interfaceType));
+                    // look for exact matches first
+                    var BImplementedInterface = BinterfaceTypes.FirstOrDefault(interfaceType => AGenericArgument == interfaceType);
+                    // Then look for assignable matches
+                    if (BImplementedInterface == null) BImplementedInterface = BinterfaceTypes.FirstOrDefault(interfaceType => AGenericArgument.IsAssignableFrom(interfaceType));
                     if (BImplementedInterface != null)
                     {
-                        var AListFieldValue = AFieldInfo.GetValue(A);
-                        if (AListFieldValue == null)  // list not created yet
+                        if (!JustTestIfCanBeWired)
                         {
-                            var listType = typeof(List<>);
-                            Type[] listParam = { BImplementedInterface };
-                            AListFieldValue = Activator.CreateInstance(listType.MakeGenericType(listParam));
-                            AFieldInfo.SetValue(A, AListFieldValue);
+                            var AListFieldValue = AFieldInfo.GetValue(A);
+                            if (AListFieldValue == null)  // list not created yet
+                            {
+                                var listType = typeof(List<>);
+                                Type[] listParam = { BImplementedInterface };
+                                AListFieldValue = Activator.CreateInstance(listType.MakeGenericType(listParam));
+                                AFieldInfo.SetValue(A, AListFieldValue);
+                            }
+                            // now add the B object to the list
+                            AListFieldValue.GetType().GetMethod("Add").Invoke(AListFieldValue, new[] { B });
+                            diagnosticOutput?.Invoke(WiringToString(A, B, AFieldInfo));
+                            Initialize(A, AFieldInfo);
                         }
-                        // now add the B object to the list
-                        AListFieldValue.GetType().GetMethod("Add").Invoke(AListFieldValue, new[] { B });
                         wired = true;
-                        diagnosticOutput?.Invoke(WiringToString(A, B, AFieldInfo));
-                        Initialize(A, AFieldInfo);
                         break;
                     }
                 }
             }
 
-            if (!wired) // throw exception
+            if (!JustTestIfCanBeWired && !wired) // throw exception
             {
                 var AinstanceName = A.GetType().GetProperties().FirstOrDefault(f => f.Name == "InstanceName")?.GetValue(A);
                 var BinstanceName = B.GetType().GetProperties().FirstOrDefault(f => f.Name == "InstanceName")?.GetValue(B);
+                string AInstanceDescription = $"{(AinstanceName == null ? "an instance of " : "")}{A.GetType().Name}{(AinstanceName != null ? $"[{AinstanceName}]" : "")}{(APortName != null ? $".\"{APortName}\"" : "")}";
+                string BInstanceDescription = $"{(BinstanceName == null ? "an instance of " : "")}{BType.Name}{(BinstanceName != null ? $"[{BinstanceName}]" : "")}";
 
-                if (APortName != null)
+                string exceptionString = "";
+
+                bool specifiedPortFound = APortName != null && AfieldInfos.FirstOrDefault() != null;
+                bool specifiedPortAlreadyWired = APortName != null && AfieldInfos.FirstOrDefault()?.GetValue(A) != null;
+                if (specifiedPortAlreadyWired)
                 {
-                    // a specific port was specified - see if the port was already wired
-                    var AfieldInfo = AfieldInfos.FirstOrDefault();
-                    if (AfieldInfo?.GetValue(A) != null) throw new Exception($"Port already wired {A.GetType().Name}[{AinstanceName}].{APortName} to {BType.Name}[{BinstanceName}]");
+                    exceptionString += $"Port already wired in {AInstanceDescription} while attemping to wire to {BInstanceDescription}";
                 }
-                string AFieldsConsidered = string.Join(", ", AfieldInfos.Select(f => $"{f.Name}:{f.FieldType}, {(f.GetValue(A) == null ? "unassigned" : "assigned")}"));
-                string BInterfacesConsidered = string.Join(", ", BinterfaceTypes.Select(f => $"{f}"));
-                throw new Exception($"Failed to wire {A.GetType().Name}[{AinstanceName}].\"{APortName}\" to {BType.Name}[{BinstanceName}]. Considered fields of A: {AFieldsConsidered}. Considered interfaces of B: {BInterfacesConsidered}.");
+                else
+                {
+                    string AFieldsConsidered = string.Join(", ", AfieldInfos.Select(f => $"{f.FieldType} {f.Name} {(f.GetValue(A) == null ? "(not yet wired)" : "(already wired)")}"));
+                    string BInterfacesConsidered = string.Join(", ", BinterfaceTypes.Select(f => $"{f}"));
+                    exceptionString += $"Failed to wire {AInstanceDescription} to {BInstanceDescription}";
+                    if (APortName == null || specifiedPortFound)
+                    {
+                        exceptionString += $"{Environment.NewLine}Considered fields of {A.GetType().Name}: {AFieldsConsidered}";
+                        exceptionString += $"{Environment.NewLine}Considered interfaces of {BType.Name}: {BInterfacesConsidered}";
+                    }
+                }
+                if (Wire(B, A, true, APortName))
+                {
+                    exceptionString += $"{Environment.NewLine}Reverse wiring is possible - did you intend to use WireToR or WireInR?";
+                }
+                else
+                if (APortName != null && !specifiedPortFound)
+                {
+                    exceptionString += $"{Environment.NewLine}Did you mispell the port name \"{APortName}\"?";
+                }
+                if (AinstanceName == null && BinstanceName == null)
+                {
+                    exceptionString += $"{Environment.NewLine}Note: adding a string property called \"InstanceName\" to your classes and giving this property different values will help this exception message identify the instances that coundn't be wired.";
+                }
+                throw new Exception(exceptionString);
             }
-            return A;
-        }
-
-        /// <summary>
-        /// Same as WireTo except that it return the second object to support composing a chain of instances of abstractions without nested syntax
-        /// e.g. new A().WireIn(new B()).WireIn(new C());
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="A">first object being wired</param>
-        /// <param name="B">second object being wired</param>
-        /// <param name="APortName">port fieldname in the A object (optional)</param>
-        /// <returns>B to support fluent programming style which allows wiring a chain of objects within .WireIn operators</returns>
-        public static object WireIn<T>(this T A, object B, string APortName = null)
-        {
-            WireTo(A, B, APortName);
-            return B;
+            return wired;
         }
 
 
-        // Some programming paradigm interfaces that we want to use need to be wired in the reverse direction from out average ALA push based dataflows.
-        // The B object has the field and the A object implements it.
-        // But the dataflow direction is from A to B, so we want to use WireTo or WireIn in the same direction as the dataflow.
-        // These two Wiring methods reverse the wiring.
-        // WireTo still returns the A object to support easy wiring of one object to many
-        // WireIn still returns the B object to support chaining of operations
-
-        public static object WireToR<T>(this T A, object B, string APortName = null)
-        {
-            WireTo(B, A, APortName);
-            return A;
-        }
-
-
-        public static object WireInR<T>(this T A, object B, string APortName = null)
-        {
-            WireTo(B, A, APortName);
-            return B;
-        }
 
 
         // This method is called after we have done a succesfull wiring

@@ -1,31 +1,52 @@
-﻿using System;
+﻿// #define UseObjectDumper
+
+
+
+using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using Library;
+#if UseObjectDumper
+using ObjectDumper;
+using System.IO;
+#endif
+
+
 
 namespace Foundation
 {
     public static partial class FoundationExtensionMethods
     {
         // override ToString for reference objects to return the class's property's values as well as the class name
-        public static string ClassToString<T>(this T instance) where T : class
+        public static string ObjectToString<T>(this T instance)
         {
-            if (instance == null)
-                return string.Empty;
-
-            StringBuilder sb = new StringBuilder();
+            if (instance == null) return string.Empty;
 
             if (instance is ExpandoObject)
             {
                 var dic = (IDictionary<string, object>)instance;
-                sb.Append(dic.Select(kvp => kvp.Key.ToString() + "=" + kvp.Value.ToString()).Join(", ")); 
+                return dic.Select(kvp => kvp.Key + "=" + kvp.Value).Join(", ");
             }
             else
+            if (instance.GetType().IsValueType)
             {
+                return instance.ToString();
+            }
+            else
+
+#if UseObjectDumper
+            {
+                var name = instance.GetType().Name;
+                var stringWriter = new StringWriter();
+                instance.Dump(name, stringWriter);
+                return stringWriter.ToString();
+            }
+#else
+            {
+                StringBuilder sb = new StringBuilder();
                 try
                 {
                     var type = instance.GetType();
@@ -77,8 +98,9 @@ namespace Foundation
                 {
                     sb.AppendLine("Exception in ToString<T>() where T : class {e}");
                 }
+                return sb.ToString();
             }
-            return sb.ToString();
+#endif
         }
     }
 }

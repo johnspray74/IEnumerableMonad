@@ -13,7 +13,7 @@ namespace DomainAbstractions
         
         public static IEnumerable<U> Bind<T, U>(this IEnumerable<T> source, Func<T, IEnumerable<U>> function)
         {
-            var em = new EnumerableMonad<T, U>(function);
+            var em = new EnumerableFunction<T, U>(function);
             source.WireToR(em);
             return em;
         }
@@ -39,7 +39,7 @@ namespace DomainAbstractions
     // It has an input "port" which is the source IEnumrable field.
     // It has an output "port", which is the implemented IEnumerable interface.
 
-    class EnumerableMonad<T, U> : IEnumerator<U>, IEnumerable<U>
+    class EnumerableFunction<T, U> : IEnumerator<U>, IEnumerable<U>
     {
         //------------------------------------------------------------------------
         // implement the constructor
@@ -47,7 +47,7 @@ namespace DomainAbstractions
 
  
         private readonly Func<T, IEnumerable<U>> function;
-        public EnumerableMonad(Func<T, IEnumerable<U>> function) { this.function = function; }
+        public EnumerableFunction(Func<T, IEnumerable<U>> function) { this.function = function; }
 
 
         private IEnumerable<T> source;  // main input port. This port is not wired directly by WireTo, but indirectly by the use of the WireForward interface.

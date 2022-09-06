@@ -155,7 +155,8 @@ namespace Application
         // The monad code in the monad or programming paradigms layer takes care of making everything work by providing two extension methiods, Bind() and ToTask().
 
 #if ListMonad
-        // This is a simple sample application that uses the typical implemention of maybe Monad.
+        // Demo application that uses the typical implemention of List<T> Monad.
+        // The Bind function can be found in the Monad namespace in the Monad subfolder in ListMonad.cs
 
         static void Application()
         {
@@ -163,7 +164,7 @@ namespace Application
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 })
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 })
             .Bind(x => new List<int> { x * 10 + 1, x * 10 + 2, x * 10 + 3 });
-            Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
+            Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Library layer of this project where I put very abstract things that complement the .NEt library
         }
 #endif
 
@@ -171,9 +172,9 @@ namespace Application
 
 #if IEnumerableMonad || ALAPullUsingBind
 
-        // IEnumerable version
-
-        // This is the same simple application as above, but uses deferred implementation of the List monad which is IEnumerable.
+        // Demo for IEnumerableMonad and demo for the ALA application both use the same application code here.
+        // However different Bind functions are used from different namespaces: Monad.Enumerable and DomainAbstractions resp.
+        // This is the same simple application as above, but uses the deferred implementation of the List<T> monad which is IEnumerable<T>.
 
         static void Application()
         {
@@ -182,16 +183,17 @@ namespace Application
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3);
 
-            Console.WriteLine(program.ObjectStructureToString(0));
+            Console.WriteLine(program.ObjectStructureToString());
             var result = program.ToList();  // now run the program
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
 
 
-        // for the IEnumerableMonad version of the compose function, (a function that takes a number and returns three numbers ending in 1, 2 and 3)
-        // I didn't want make lists like I did in the List version above.
-        // That meant creating a class that implements IEnumerable. The yield return syntax below is by far the easiest way to do that, as the compiler creates the needed class for you.
-        // In the enumerableMonad.cs file in the monad subfolder, you can see a class that implements iEnumerable without using yield return syntax.
+        // for the function that takes a number and returns three numbers ending in 1, 2 and 3,
+        // I didn't want to use lists like I did in the List version above - I wanted lazy functions.
+        // That meant creating a class that implements IEnumerable. 
+        // The yield return syntax below is by far the easiest way to do that, as the compiler creates the needed class for you.
+        // In the EnumerableMonad.cs file in the monad subfolder, you can see a class that implements IEnumerable without using yield return syntax.
 
         private static IEnumerable<int> MutiplyBy10AndAdd1Then2Then3(int x)
         {
@@ -205,13 +207,16 @@ namespace Application
 
 
 #if ALAPullUsingWireIn
+        // Demo ALA application that does the same job as the IEnumerableMonad application above
+        // The ALA application differs by using .WireInR and new keywords instead of .Bind.
+        // It uses a Domain Abstraction class called EnumerableFunction, whichi is configured with a function returns many values, so it returns an IEnumerable
 
         static void Application()
         {
             var program = (IEnumerable<int>) new List<int> { 0 }
-            .WireInR(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new EnumerableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3));
+            .WireInR(new EnumerableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new EnumerableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new EnumerableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3));
             var result = program.ToList();
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
@@ -235,6 +240,11 @@ namespace Application
 
 
 #if IObservableMonad || ALAPushUsingBind
+        // The Demo for IObservableMonad and the demo for the ALA application both use the same application code here.
+        // However different Bind function sin different namespaces are used: Monad.Observable and DomainAbstractions resp.
+        // This demo is the IObservable equivalent of the previous iEnumerable application
+        // The function that Bind takes is a function that takse an int and returns an IObservable<int>.
+
         static void Application()
         {
             // Demonstration of composing functions that take an int and return an IObservable<int> (MutiplyBy10AndAdd1Then2Then3)
@@ -249,7 +259,7 @@ namespace Application
                         () => Console.Write("Complete")
                         );
             Console.WriteLine();
-            Console.WriteLine("Note: # are written out in Bind where it intercepted OnCompeted calls were intecepted to effect joining all the observables into a single observable");
+            Console.WriteLine("Note: # are written out in Bind where it intercepted OnCompeted calls to effect joining all the observables into a single observable");
         }
 
 
@@ -274,8 +284,11 @@ namespace Application
 #if IObservableMonad2
         static void Application()
         {
-            // Demonstration of composing functions that take an int and return an IObservable<int> (MutiplyBy10AndAdd1Then2Then3)
-            // using a Bind function function
+            // This Demo is the same as the previous, except that we have changed the signature of the function that Bind takes to making writing those functions simpler.
+            // Instead of returning an IObservable<int> we pass it an IObserver<int>.
+            // This alleviates the function from having to create an IObservable object, and that Object in turn having to receive an IObserver on its Subscribe.
+            // Instead the function can immediately run and just put its output to the observer object that was passed to it up front.
+            // If you look at the MutiplyBy10AndAdd1Then2Then3 function compared with the previous demo, it just immediately calls observer.OnNexts
 
             Observable.Create<int>(observer => { observer.OnNext(0); observer.OnCompleted();  return Disposable.Empty; })
             .Bind<int,int>(MutiplyBy10AndAdd1Then2Then3)
@@ -304,16 +317,20 @@ namespace Application
 
 
 #if ALAPushUsingWireIn
+        // Demo ALA application that does the same job as the IObservableMonad2 application above
+        // The ALA application differs by using .WireInR and new keywords instead of .Bind.
+        // It uses a Domain Abstraction class called ObservableFunction, which is an abstraction to be configured with a function that returns many values, and so takes an IObservable for its output
         static void Application()
         {
-            var program = (ObservableToConsoleOutput<int>)
+            var outputer = (ObservableToOutput<int>)
             new ValueToObservable<int>(0)
-            .WireInR(new ObservableMonad<int,int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new ObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new ObservableMonad<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new ObservableToConsoleOutput<int>());
+            .WireInR(new ObservableFunction<int,int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new ObservableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new ObservableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireInR(new ObservableToOutput<int>(Console.Write));
 
-            program.Run();
+            new StartEvent().WireTo(outputer)
+                            .Run();
         }
 
 
@@ -328,9 +345,20 @@ namespace Application
                 return Disposable.Empty;
             });
         }
-
-
 #endif
+
+
+        // We have now done seven demo applications that all do basically the same thing based on IEnumerable and Observable:
+        // 1. IEnumerable Monad using Bind
+        // 2. IEnumerable ALA using WireInR and new
+        // 3. IEnumerable ALA using Bind to the WireInR and new to get the same exact application code as the monad versions (curiousity)
+        // 4. IObservable Monad using Bind
+        // 5. IObservable Monad using Bind that takes Actions that take an IObserver 
+        // 6. IObservable ALA using WireInR and new
+        // 7. IObservable ALA using Bind to the WireInR and new to get the same exact application code as the monad version (curiousity)
+        
+
+
 
 
 #if IEnumerableQuery
@@ -446,6 +474,10 @@ namespace Application
 
 
 #if IObservableChain
+// Demo of mxing Domain abstractions that have IObservable ports with IObservable monads (reactive extensions)
+// static version specifies an explicit type for the CSVFileReaderWriter.
+// All other types along the dataflow are determined through type inference, even the ObservableToOutput at the end.
+
         static void Application()
         {
             var outputer =
@@ -454,11 +486,10 @@ namespace Application
             ((IObservable<DataType>)new CSVFileReaderWriter<DataType>() { FilePath = "DataFile1.txt" })
             .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number + 1 })
             .Where(x => x.Number > 48)
-            .ToOutput();
-
-            outputer.output += Console.Write;
+            .ToOutput(Console.Write);
 
             var program = new StartEvent().WireTo(outputer);
+            program.Run();
             program.Run();
         }
 
@@ -472,6 +503,13 @@ namespace Application
 
 
 #if IObservableChainDynamic
+// Demo of mxing Domain abstractions that have IObservable ports with IObservable monads (reactive extensions)
+// dynamic version. The CSV file must have header information. Use the write function of CSVFileReaderWriter to create a file with correct format first.
+// The the demo proper is reading the file back and passing the data along the dataflow completely dynamicall. 
+// The intial part of the dataflow uses ExpandoObject
+// After the Select, it is an anonymous typed object and uses type inference for the rest of the way to the ObservableToOutput at the end.
+// However the ObservableToOutput is effectively not typed because it takes object. This allows it to be Wired using WireInR rather than using an extension method to get type inference.
+
         static void Application()
         {
             var csvrw = new CSVFileReaderWriter() { FilePath = "DataFile2.txt" };
@@ -493,17 +531,15 @@ namespace Application
 
             writer.OnCompleted();
 
-            var outputer = new ObservableToOutput<ExpandoObject>();
-            // outputer.source =
+            var outputer = new ObservableToOutput<object>(Console.Write);
+
             ((IObservable<dynamic>)csvrw)
-                // .Sniff()
+                .Sniff()
                 .Select(x => new { Firstname = ((string)x.Name).SubWord(0), Number = x.Number + 1 })
-                // .Sniff()
+                .Sniff()
                 .Where(x => x.Number > 48)
                 .Sniff()
                 .WireInR(outputer);
-
-            outputer.output += Console.Write;
 
             var program = new StartEvent().WireTo(outputer);
             program.Run();

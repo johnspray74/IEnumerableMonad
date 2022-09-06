@@ -1,8 +1,15 @@
-﻿using System;
+﻿// #define UseObjectDumper
+
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+#if UseObjectDumper
+using ObjectDumper;
+using System.IO;
+#endif
 
 namespace Foundation
 {
@@ -16,6 +23,26 @@ namespace Foundation
 
     public static partial class FoundationExtensionMethods
     {
+        public static string ObjectStructureToString<T>(this T instance) where T : class
+        {
+#if UseObjectDumper
+            var name = instance.GetType().Name;
+            var stringWriter = new StringWriter();
+            try
+            {
+                instance.Dump(name, stringWriter);
+            }
+            catch
+            {
+                sb.AppendLine("Exception getting value");
+            }
+            return stringWriter.ToString();
+#else
+            return ObjectStructureToString<T>(instance, 0);
+#endif
+        }
+
+
 
 
         public static string ObjectStructureToString<T>(this T instance, int depth) where T : class

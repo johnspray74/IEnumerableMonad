@@ -14,20 +14,33 @@ using System.Threading.Tasks;
 namespace DomainAbstractions
 {
     /// <summary>
-    /// Reading text records from a csv file and outputs them in a class T.
-    /// Writing text records to a csv file from a class T.
-    /// Ports
-    /// This domain abstraction supports three different programming paradigms options for output, and one option for input.
-    ///    Output1: IEnumerable (implemented)
-    ///    Output2: IObservable (implemented)
-    ///    With these, data transfers are initiated by the destination, hence they are both pull programming paradigms destpite the fact that IObservable is often taughted as being a
-    ///    a push paradigm - it is only push for the data transfer itself, not for starting the transfers, which is done by the Subscribe method.
-    ///    Output3: IObserverPush (field) is initiated by the source which is this class.
-    ///    A start input is provided for this, however we could add monitoring of the file and push out its contenst if it changes.
-    ///    This third output option makes the programming paradigm truly a push programming paradigm.
-    /// Input : IObservablePush (implemented)   
-    /// IDataFlow<string>: input for filepath;
-    /// iEvent: input to start file read
+    /// Reads text records from a csv file and outputs them in a class T
+    /// Writes text records to a csv file from a class T
+    /// CSV file has no header lines
+    /// Ports:
+    /// This domain abstraction supports three different programming paradigm ports for output, and one port for input.
+    ///    Output1: IEnumerable (implemented interface)
+    ///    Output2: IObservable (implemented interface)
+    ///        With these, reading from the CSV file is initiated by the destination, hence they are both pull programming paradigms despite the fact that IObservable is often taughted as being a
+    ///        a push paradigm - it is only push for the data transfer itself, not for starting the transfers, which is done by the Subscribe method.
+    ///    Output3: IObserverPush (field) is initiated by the source (this class).
+    ///        A start input port is provided for this, however we could add monitoring of the file and push out its content whenever it changes.
+    ///        This third output option makes the programming paradigm truly a push programming paradigm.
+    /// Input : IObservablePush (implemented interface)  
+    ///        From writing to the file - push programming paradigm 
+    /// IDataFlow<string>: input for filepath (although filepath can also be set via a property.)
+    /// IEvent: input to start file read
+    /// 
+    /// Example of use:
+    ///    private class DataType { public string Name { get; set; } public int Number { get; set; } }
+    ///    var csvFileReaderWriter = new CSVFileReaderWriter() { FilePath = "DataFile1.txt" };
+    ///    var writer = (IObserverPush<DataType>) csvFileReaderWriter;
+    ///    writer.OnStart();
+    ///    writer.OnNext(new dataType { Number = 48; Name = "Wynn Takeall"; } ); 
+    ///    writer.OnNext(new dataType { Number = 49; Name = "Jim Jones"; } );
+    ///    writer.OnCompleted();
+    ///    var reader = (IEnumerable<DataType>) csvFileReaderWriter;
+    ///    foreach (DataType data in reader) Console.Writeline($"Name={data.Name}, Number={data.Number}");
     /// </summary>
     public class CSVFileReaderWriter<T> : IEvent, IDataFlow<string>, IEnumerable<T>, IObservable<T>, IObserverPush<T> where T : new() // start, filepath, output1, output2, input
     {
@@ -217,8 +230,41 @@ namespace DomainAbstractions
 
 
 
-    // Dynamic version of CSVFileReaderWriter
-    // No static type checking is used.
+    /// <summary>
+    /// Dynamic version of CSVFileReaderWriter
+    /// No static type checking is used.
+    /// Reads text records from a csv file and outputs them in a ExpandoObject
+    /// Writes text records to a csv file from a ExpandoObject.
+    /// CSV file must have two header lines, one for column name, and one for colum type (type.ToString())
+    /// Ports:
+    /// This domain abstraction supports three different programming paradigm ports for output, and one port for input.
+    ///    Output1: IEnumerable (implemented interface)
+    ///    Output2: IObservable (implemented interface)
+    ///        With these, reading from the CSV file is initiated by the destination, hence they are both pull programming paradigms despite the fact that IObservable is often taughted as being a
+    ///        a push paradigm - it is only push for the data transfer itself, not for starting the transfers, which is done by the Subscribe method.
+    ///    Output3: IObserverPush (field) is initiated by the source (this class).
+    ///        A start input port is provided for this, however we could add monitoring of the file and push out its content whenever it changes.
+    ///        This third output option makes the programming paradigm truly a push programming paradigm.
+    /// Input : IObservablePush (implemented interface)  
+    ///        From writing to the file - push programming paradigm 
+    /// IDataFlow<string>: input for filepath (although filepath can also be set via a property.)
+    /// IEvent: input to start file read
+    /// 
+    /// 
+    /// Example of use:
+    ///    var csvFileReaderWriter = new CSVFileReaderWriter() { FilePath = "DataFile2.txt" };
+    ///    IObserverPush<ExpandoObject> writer = csvFileReaderWriter;
+    ///    writer.OnStart();
+    ///    dynamic eo = new ExpandoObject(); 
+    ///    eo.Number = 47; eo.Name = "Jack Up"; writer.OnNext(eo);
+    ///    eo.Number = 48; eo.Name = "Wynn Takeall"; writer.OnNext(eo);
+    ///    writer.OnCompleted();
+    ///    IObservable<ExpandoObject> reader = csvFileReaderWriter;
+    ///    reader.Subscribe(
+    ///                 (eo) => Console.WriteLine(((IDictionary<string, object>)eo).Select(kvp => kvp.Key + "=" + kvp.Value).Join(", ")),
+    ///                 (ex) => Console.WriteLine(ex),
+    ///                 () => Console.WriteLine("Completed");
+    /// </summary>
 
     public class CSVFileReaderWriter : IEvent, IDataFlow<string>, IEnumerable<ExpandoObject>, IObservable<ExpandoObject>, IObserverPush<ExpandoObject> // start, filepath, output1, output2, input
     {

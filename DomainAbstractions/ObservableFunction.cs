@@ -17,7 +17,7 @@ namespace DomainAbstractions
 
         public static IObservable<U> Bind<T, U>(this IObservable<T> source, Func<T, IObservable<U>> function)
         {
-            return (IObservable<U>) source.WireInR(new ObservableMonad<T, U>(function));
+            return (IObservable<U>) source.WireInR(new ObservableFunction<T, U>(function));
         }
 
 
@@ -53,13 +53,13 @@ namespace DomainAbstractions
     // It has an output "port", which is the implemented IEnumerable interface, which is wired by the next Bind function.
     // Note that these are wired in the opposite direction to the dataflow. Tht's becasue this is a pull type monad
     // Indeed the ALA version is based on this class. but will be wired up using the WireIn operator instead.
-    class ObservableMonad<T, U> : IObserver<T>, IObservable<U>  // IObservable is the output port, IObserver is used to subscribe to the previous instance
+    class ObservableFunction<T, U> : IObserver<T>, IObservable<U>  // IObservable is the output port, IObserver is used to subscribe to the previous instance
     {
         //------------------------------------------------------------------------
         // implement the constructor
 
         private readonly Func<T, IObservable<U>> function;
-        public ObservableMonad(Func<T, IObservable<U>> function) { this.function = function; }
+        public ObservableFunction(Func<T, IObservable<U>> function) { this.function = function; }
 
 
         private IObservable<T> input;   // This is wired by WireInR to the previous monad object

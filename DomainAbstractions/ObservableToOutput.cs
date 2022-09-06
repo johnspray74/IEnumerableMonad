@@ -1,14 +1,17 @@
 ﻿using Foundation;
 using ProgrammingParadigms;
 using System;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Reactive.Disposables;
 
 namespace DomainAbstractions
 {
     // static version
-    class ObservableToOutput<T> : IEvent, IObservable<T> where T : class
+    class ObservableToOutput<T> : IEvent, IObservable<T>  // start, output (output used only from sniff function)
     {
+        public ObservableToOutput(OutputDelegate output) { this.output = output; }
+
         private string separator;
         private string Separator { set { separator = value; } }
 
@@ -20,7 +23,7 @@ namespace DomainAbstractions
         void IEvent.Execute()
         {
             source.Subscribe(
-                             (x) => output?.Invoke($"{x.ClassToString()}{Environment.NewLine}"),
+                             (x) => output?.Invoke($"{x.ObjectToString()} "),
                              (ex) => output?.Invoke($"Exception {ex}"),
                               () => output?.Invoke($"Complete{Environment.NewLine}")
                     );
@@ -31,7 +34,7 @@ namespace DomainAbstractions
         IDisposable IObservable<T>.Subscribe(IObserver<T> observer)
         {
             source.Subscribe(
-                             (x) => { output?.Invoke($"{x.ClassToString()}{Environment.NewLine}"); observer.OnNext(x); },
+                             (x) => { output?.Invoke($"{x.ObjectToString()}{Environment.NewLine}"); observer.OnNext(x); },
                              (ex) => { output?.Invoke($"Exception {ex}"); observer.OnError(ex);  } ,
                               () => { output?.Invoke($"Complete{Environment.NewLine}"); observer.OnCompleted(); }
                     );
@@ -47,8 +50,8 @@ namespace DomainAbstractions
 
     static partial class ExtensionMethods
     {
-        public static ObservableToOutput<T> ToOutput<T>(this IObservable<T> observable) where T : class { var o = new ObservableToOutput<T>(); observable.WireInR(o); return o; }
-        public static IObservable<T> Sniff<T>(this IObservable<T> observable) where T : class { var oto = new ObservableToOutput<T>(); oto.output += Console.Write;  observable.WireInR(oto); return oto; }
+        public static ObservableToOutput<T> ToOutput<T>(this IObservable<T> observable, OutputDelegate output) where T : class { var o = new ObservableToOutput<T>(output); observable.WireInR(o); return o; }
+        // public static IObservable<T> Sniff<T>(this IObservable<T> observable) where T : class { var oto = new ObservableToOutput<T>((x)=>Debug.Write(x)); observable.WireInR(oto); return oto; }
     }
 
 
@@ -69,17 +72,28 @@ namespace DomainAbstractions
 
         private IObservable<object> source;   // input port
 
-        public delegate void OutputDelegate(string output);
         public event OutputDelegate output;   // output port
 
+        public ObservableToOutput(OutputDelegate output) { this.output = output; }
 
         void IEvent.Execute()
         {
             source.Subscribe(
-                             (x) => output?.Invoke($"{x.ClassToString()}{Environment.NewLine}"),
+                             (x) => output?.Invoke($"{x.ObjectToString()}{Environment.NewLine}"),
                              (ex) => output?.Invoke($"Exception {ex}"),
                               () => output?.Invoke($"Complete{Environment.NewLine}")
                     );
         }
     }
+
+
+
+
+    static partial class ExtensionMethods
+    {
+        public static ObservableToOutput ToOutput(this IObservable<object> observable, OutputDelegate output) { var o = new ObservableToOutput(output); observable.WireInR(o); return o; }
+        public static IObservable<dynamic> Sniff(this IObservable<dynamic> observable) { var oto = new ObservableToOutput((x) => Debug.Write(x)); observable.WireInR(oto); return (IObservable<dynamic>)oto; }
+    }
+
+
 }

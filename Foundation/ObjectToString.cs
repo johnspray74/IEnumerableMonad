@@ -28,7 +28,7 @@ namespace Foundation
             if (instance is ExpandoObject)
             {
                 var dic = (IDictionary<string, object>)instance;
-                return dic.Select(kvp => kvp.Key + "=" + kvp.Value).Join(", ");
+                return "ExpandoObject {" + dic.Select(kvp => kvp.Key + "=" + kvp.Value).Join(", ") + "}";
             }
             else
             if (instance.GetType().IsValueType)
@@ -54,8 +54,6 @@ namespace Foundation
                     var typeName = type.Name;
                     sb.Append(typeName);
                     sb.Append(" ");
-                    if (instance.GetType().IsGenericType) sb.Append(" (Generic)");
-
                     sb.Append("{");
 
                     var strListType = typeof(List<string>);

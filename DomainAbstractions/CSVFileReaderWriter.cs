@@ -201,7 +201,7 @@ namespace DomainAbstractions
         void IObserverPush<T>.OnCompleted()
         {
             string directoryPath = Path.GetDirectoryName(filePath);
-            if (!Directory.Exists(directoryPath))
+            if (directoryPath!="" && !Directory.Exists(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
             }

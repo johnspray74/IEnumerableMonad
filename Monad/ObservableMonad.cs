@@ -1,5 +1,7 @@
 ﻿// #define UseCreate
 
+// Monad.ObservableMonad namespace, Bind takes a Func
+// Monad.ObservableMonad2 namespace, Bind takes an Action // This is simpler - use that one
 
 
 using System;

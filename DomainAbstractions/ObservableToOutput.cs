@@ -7,17 +7,19 @@ using System.Reactive.Disposables;
 
 namespace DomainAbstractions
 {
-    // static version
-    class ObservableToOutput<T> : IEvent, IObservable<T>  // start, output (output used only from sniff function)
+
+    // This is an ALA domain abstraction with an input IObservable<T> port that converts to text and outputs to a delegate that takes a string parameter
+    // static version - uses a generic type T (see below for dynamic version)
+    // ObservableToOutput is at the end of an Iobservable chain, so it intiates the data transfer - it has an iEvent input for this purpose.
+
+
+    class ObservableToOutput<T> : IEvent  // start port
     {
         public ObservableToOutput(OutputDelegate output) { this.output = output; }
 
-        private string separator;
-        private string Separator { set { separator = value; } }
-
         private IObservable<T> source;   // input port
 
-        public event OutputDelegate output;   // output port
+        public event OutputDelegate output;   // output delegate for text
 
 
         void IEvent.Execute()
@@ -28,19 +30,9 @@ namespace DomainAbstractions
                               () => output?.Invoke($"Complete{Environment.NewLine}")
                     );
         }
-
-
-        // used for Sniff only
-        IDisposable IObservable<T>.Subscribe(IObserver<T> observer)
-        {
-            source.Subscribe(
-                             (x) => { output?.Invoke($"{x.ObjectToString()}{Environment.NewLine}"); observer.OnNext(x); },
-                             (ex) => { output?.Invoke($"Exception {ex}"); observer.OnError(ex);  } ,
-                              () => { output?.Invoke($"Complete{Environment.NewLine}"); observer.OnCompleted(); }
-                    );
-            return Disposable.Empty;
-        }
     }
+
+
 
 
 
@@ -51,12 +43,7 @@ namespace DomainAbstractions
     static partial class ExtensionMethods
     {
         public static ObservableToOutput<T> ToOutput<T>(this IObservable<T> observable, OutputDelegate output) where T : class { var o = new ObservableToOutput<T>(output); observable.WireInR(o); return o; }
-        // public static IObservable<T> Sniff<T>(this IObservable<T> observable) where T : class { var oto = new ObservableToOutput<T>((x)=>Debug.Write(x)); observable.WireInR(oto); return oto; }
     }
-
-
-
-
 
 
 
@@ -67,9 +54,6 @@ namespace DomainAbstractions
     // or use the ToOutput extension method to make type inference work.
     class ObservableToOutput : IEvent
     {
-        private string separator;
-        private string Separator { set { separator = value; } }
-
         private IObservable<object> source;   // input port
 
         public event OutputDelegate output;   // output port
@@ -91,9 +75,52 @@ namespace DomainAbstractions
 
     static partial class ExtensionMethods
     {
+        // if monads, and prefer monad syntax instead of WireInR, this allows output at the end using e.g. .ToOutput(Console.WriteLine).
         public static ObservableToOutput ToOutput(this IObservable<object> observable, OutputDelegate output) { var o = new ObservableToOutput(output); observable.WireInR(o); return o; }
-        public static IObservable<dynamic> Sniff(this IObservable<dynamic> observable) { var oto = new ObservableToOutput((x) => Debug.Write(x)); observable.WireInR(oto); return (IObservable<dynamic>)oto; }
     }
+
+
+
+
+
+
+
+
+    // IObserable<T> Decorator used by Sniff function
+    // T can be normal object or ExpandoObject
+    class SniffDecorator<T> : IObservable<T>  // output
+    {
+        public SniffDecorator(OutputDelegate output) { this.output = output; }
+
+        private IObservable<T> source;   // input port
+
+        public event OutputDelegate output;   // output port
+
+
+        // pass everything straight through from input to output, but output it to the delegate in text form as well.
+        IDisposable IObservable<T>.Subscribe(IObserver<T> observer)
+        {
+            source.Subscribe(
+                             (x) => { output?.Invoke($"{x.ObjectToString()}{Environment.NewLine}"); observer.OnNext(x); },
+                             (ex) => { output?.Invoke($"Exception {ex}"); observer.OnError(ex); },
+                              () => { output?.Invoke($"Complete{Environment.NewLine}"); observer.OnCompleted(); }
+                    );
+            return Disposable.Empty;
+        }
+    }
+
+
+
+
+    // Allows inserting .Sniff() into a chain of monads, which will output to debug window the type of the dataflow at that point and the data flowing past that point.
+    static partial class ExtensionMethods
+    {
+        // T can be any class including ExpandoObject
+        public static IObservable<T> Sniff<T>(this IObservable<T> observable) where T : class { var oto = new SniffDecorator<T>((x) => Debug.Write(x)); observable.WireInR(oto); return oto; }
+    }
+
+
+
 
 
 }

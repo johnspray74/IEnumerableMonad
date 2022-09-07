@@ -7,7 +7,7 @@ namespace DomainAbstractions
 {
     // extension methods for the EnumerableMonad
 
-    public static class ListMonadExtensionMethods
+    public static partial class ExtensionMethods
     {
         // This Bind function is identical to the one in the Monad namespace implementation
         
@@ -24,7 +24,7 @@ namespace DomainAbstractions
 
     // This is the ALA domain absraction class to support monad behaviour - composing functions that take a value and return an IEnumerable.
     // It is configured with a lambda function from the application layer.
-    // It has an input port and an output port which both use the iEnumerable programming paradigm
+    // It has an input port and an output port which both use the IEnumerable programming paradigm
     // It is Wireable using WireInR.
     // WirInR is used like WireIn, but does the actual wiring in reverse which is required by the IEnumerable interface.
     // source.WireIn(new EnumerableMonad(lambda)) 
@@ -43,8 +43,6 @@ namespace DomainAbstractions
     {
         //------------------------------------------------------------------------
         // implement the constructor
-
-
  
         private readonly Func<T, IEnumerable<U>> function;
         public EnumerableFunction(Func<T, IEnumerable<U>> function) { this.function = function; }

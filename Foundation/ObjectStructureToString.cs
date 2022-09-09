@@ -21,7 +21,7 @@ namespace Foundation
     // TBD, detect of we have visted an object before to avoid duplication, or worse an infinite loop
 
 
-    public static partial class FoundationExtensionMethods
+    static partial class ExtensionMethods
     {
         public static string ObjectStructureToString<T>(this T instance) where T : class
         {

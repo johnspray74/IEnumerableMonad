@@ -10,7 +10,7 @@ namespace Monad.List
     // The Bind method operates on a List<T> and returns a List<U>.
     // The composed function must take a T and return a List<T> 
 
-    public static class MonadExtensionMethods
+    static partial class ExtensionMethods
     {
         public static List<U> Bind<T, U>(this List<T> source, Func<T, List<U>> function)
         {

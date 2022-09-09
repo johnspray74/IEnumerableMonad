@@ -18,7 +18,7 @@ using System.IO;
 
 namespace Foundation
 {
-    public static partial class FoundationExtensionMethods
+    static partial class FoundationExtensionMethods
     {
         // override ToString for reference objects to return the class's property's values as well as the class name
         public static string ObjectToString<T>(this T instance)

@@ -1,7 +1,7 @@
 ﻿// #define UseCreate
 
-// Monad.ObservableMonad namespace, Bind takes a Func
-// Monad.ObservableMonad2 namespace, Bind takes an Action // This is simpler - use that one
+// Monad.ObservableMonadF namespace, Bind takes a Func
+// Monad.ObservableMonadA namespace, Bind takes an Action // This is simpler - use that one
 
 
 using System;
@@ -15,12 +15,12 @@ using System.Reactive.Disposables;
 
 
 
-namespace Monad.ObservableMonad
+namespace Monad.ObservableMonadF
 {
 
     // extension methods for the ObservableMonad
 
-    public static class MonadExtensionMethods
+    static partial class ExtensionMethods
     {
 
 #if UseCreate

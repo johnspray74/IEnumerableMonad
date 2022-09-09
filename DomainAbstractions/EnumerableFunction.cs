@@ -7,7 +7,7 @@ namespace DomainAbstractions
 {
     // extension methods for the EnumerableMonad
 
-    public static partial class ExtensionMethods
+    static partial class ExtensionMethods
     {
         // This Bind function is identical to the one in the Monad namespace implementation
         

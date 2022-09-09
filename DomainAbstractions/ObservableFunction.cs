@@ -9,9 +9,9 @@ using System.Reactive.Disposables;
 namespace DomainAbstractions
 {
 
-    // extension methods for the ObservableMonad
+    // extension methods for the ObservableMonadF
 
-    public static class MonadExtensionMethods
+    static partial class ExtensionMethods
     {
 
 
@@ -35,7 +35,7 @@ namespace DomainAbstractions
     // A good time to do this is when B is itself subsccribed to.
     // Instances of this class can be wired to any IObservable source.
     // It is used like this:
-    // .WireInR(new iObservableMonad(lambda)), where lambda is a function that takes a T and returns an IObservable<U>. 
+    // .WireInR(new IObservableMonadF(lambda)), where lambda is a function that takes a T and returns an IObservable<U>. 
     // The lambdas returned IObservable can of course push out multiple values.
 
     // For demonstration purposes it can also be used like this so that the syntax is identical to normal monads:

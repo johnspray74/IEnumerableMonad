@@ -18,14 +18,14 @@
 
 
 // uncomment one of the following variations
-#define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
+// #define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
 
 // #define IEnumerableMonad                 // demo of deferred monad using IEnumerable. Bind is in Monad.Enumerable namespace
 // #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
-// #define ALAPullUsingBind                // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
+// #define ALAPullUsingBind                 // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
 
-// #define IObservableMonad                 // demo of deferred monad using IObserable. Bind takes a Func. Bind is in Monad.ObservableMonad namespace
-// #define IObservableMonad2                // demo of deferred monad using IObserable. Bind takes an Action. Bind is in Monad.ObservableMonad2 namespace
+// #define IObservableMonadF                // demo of deferred monad using IObserable. Bind takes a Func. Bind is in Monad.ObservableMonadF namespace
+// #define IObservableMonadA                // demo of deferred monad using IObserable. Bind takes an Action. Bind is in Monad.ObservableMonadA namespace
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
@@ -33,8 +33,8 @@
 // #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
 // #define IObservableQuery                 // demo or Reactive Extensions and ALA together
 
-// #define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
-// #define IObservableChainDynamic             // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads
+#define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
+// #define IObservableChainDynamic          // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads
 
 
 
@@ -63,12 +63,12 @@ using Monad.List;
 using Monad.Enumerable;
 #endif
 
-#if IObservableMonad
-using Monad.ObservableMonad;
+#if IObservableMonadF
+using Monad.ObservableMonadF;
 #endif
 
-#if IObservableMonad2
-using Monad.ObservableMonad2;
+#if IObservableMonadA
+using Monad.ObservableMonadA;
 #endif
 
 #if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery || IObservableChain || IObservableChainDynamic
@@ -233,8 +233,8 @@ namespace Application
 
 
 
-#if IObservableMonad || ALAPushUsingBind
-        // The Demo for IObservableMonad and the demo for the ALA application both use the same application code here.
+#if IObservableMonadF || ALAPushUsingBind
+        // The Demo for IObservableMonadF and the demo for the ALA application both use the same application code here.
         // However different Bind function sin different namespaces are used: Monad.Observable and DomainAbstractions resp.
         // This demo is the IObservable equivalent of the previous iEnumerable application
         // The function that Bind takes is a function that takse an int and returns an IObservable<int>.
@@ -275,7 +275,7 @@ namespace Application
 
 
 
-#if IObservableMonad2
+#if IObservableMonadA
         static void Application()
         {
             // This Demo is the same as the previous, except that we have changed the signature of the function that Bind takes to making writing those functions simpler.
@@ -311,7 +311,7 @@ namespace Application
 
 
 #if ALAPushUsingWireIn
-        // Demo ALA application that does the same job as the IObservableMonad2 application above
+        // Demo ALA application that does the same job as the IObservableMonadA application above
         // The ALA application differs by using .WireInR and new keywords instead of .Bind.
         // It uses a Domain Abstraction class called ObservableFunction, which is an abstraction to be configured with a function that returns many values, and so takes an IObservable for its output
         static void Application()
@@ -485,10 +485,11 @@ namespace Application
             writer.OnNext(new DataType() { Number = 49, Name = "Rich Busted" });
             writer.OnCompleted();
 
-            var outputer = new ObservableToOutput<object>(Console.Write);
 
             // Create a program for reading the CSV file and displaying it on the console
-            // var outputer =
+
+            var outputer = new ObservableToOutput<object>(Console.Write);
+
             ((IObservable<DataType>)csvrw)
             // .Sniff()
             .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number + 1 })
@@ -498,6 +499,8 @@ namespace Application
             .WireInR(outputer);
 
             var program = new StartEvent().WireTo(outputer);
+
+
             program.Run();
             program.Run();   // run the program twice to make sure it can rerun
         }
@@ -535,9 +538,10 @@ namespace Application
             eo.Number = 49; eo.Name = "Rich Busted"; writer.OnNext(eo);
             writer.OnCompleted();
 
+            // Create a program for reading the CSV file and displaying it on the console
+
             var outputer = new ObservableToOutput<object>(Console.Write);
 
-            // Create a program for reading the CSV file and displaying it on the console
             ((IObservable<dynamic>)csvrw)
                 // .Sniff()
                 .Select(x => new { Firstname = ((string)x.Name).SubWord(0), Number = x.Number + 1 })
@@ -547,6 +551,8 @@ namespace Application
                 .WireInR(outputer);
 
             var program = new StartEvent().WireTo(outputer);
+
+
             program.Run();  
             program.Run();  // run the program twice to make sure it can rerun
         }

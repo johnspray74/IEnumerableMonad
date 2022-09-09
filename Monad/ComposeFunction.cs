@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ComposeFunction
 {
-    static class ComposeFunctionExtensionMethods
+    static partial class ExtensionMethods
     {
         public static Func<int> ToFunc(this int source)
         {

@@ -488,15 +488,14 @@ namespace Application
 
             // Create a program for reading the CSV file and displaying it on the console
 
-            var outputer = new ObservableToOutput<object>(Console.Write);
-
+            var outputer =
             ((IObservable<DataType>)csvrw)
             // .Sniff()
             .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number + 1 })
             // .Sniff()
             .Where(x => x.Number > 48)
             // .Sniff()
-            .WireInR(outputer);
+            .ToOutput(Console.WriteLine); // need to use ToOutput instead of WireInR(new ObservableToOutput<T>(Console.WriteLine)) because T needs to be determined by TypeInference from the output of the Where
 
             var program = new StartEvent().WireTo(outputer);
 

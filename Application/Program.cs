@@ -31,9 +31,9 @@
 
 // #define IEnumerableQuery                 // demo of using LINQ and ALA together
 // #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
-// #define IObservableQuery                 // demo or Reactive Extensions and ALA together
+#define IObservableQuery                 // demo or Reactive Extensions and ALA together
 
-#define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
+// #define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
 // #define IObservableChainDynamic          // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads
 
 
@@ -316,12 +316,12 @@ namespace Application
         // It uses a Domain Abstraction class called ObservableFunction, which is an abstraction to be configured with a function that returns many values, and so takes an IObservable for its output
         static void Application()
         {
-            var outputer = (ObservableToOutput<int>)
+            var outputer = (ObservableToSerial<int>)
             new ValueToObservable<int>(0)
             .WireInR(new ObservableFunction<int,int>(MutiplyBy10AndAdd1Then2Then3))
             .WireInR(new ObservableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
             .WireInR(new ObservableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
-            .WireInR(new ObservableToOutput<int>(Console.Write));
+            .WireInR(new ObservableToSerial<int>(Console.Write));
 
             new StartEvent().WireTo(outputer)
                             .Run();
@@ -410,12 +410,12 @@ namespace Application
 
 
             // Now create an ALA program using the domain abstraction, Query
-            var program = (EnumerableToConsoleOutput<int>)
+            var program = (EnumerableToSerial<int>)
             new List<int> { 0 }
             .WireInR(new EnumerableQuery<int, int>(proxySource1, query1) { instanceName = "Query1" })
             .WireInR(new EnumerableQuery<int, int>(proxySource2, query2) { instanceName = "Query2" })
             .WireInR(new EnumerableQuery<int, int>(proxySource3, query3) { instanceName = "Query3" })
-            .WireInR(new EnumerableToConsoleOutput<int>());
+            .WireInR(new EnumerableToSerial<int>(Console.Write));
 
             program.Run();
 
@@ -441,14 +441,16 @@ namespace Application
             var subject3 = new Subject<int>();
             var query3 = subject3.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 3);
 
-            var program = (ObservableToConsoleOutput<int>)
-            new ValueToObservable<int>(0)
-            .WireInR(new ObservableQuery<int, int>(subject1, query1))
-            .WireInR(new ObservableQuery<int, int>(subject2, query2))
-            .WireInR(new ObservableQuery<int, int>(subject3, query3))
-            .WireInR(new ObservableToConsoleOutput<int>());
+            var program = new StartEvent();
+            program
+            .WireIn(new ValueToObserverPush<int>(0))
+            .WireIn(new ObservableQuery<int, int>(subject1, query1))
+            .WireIn(new ObservableQuery<int, int>(subject2, query2))
+            .WireIn(new ObservableQuery<int, int>(subject3, query3))
+            .WireIn(new ObserverPushToSerial<int>(Console.Write));
 
             program.Run();
+            program.Run();  // test we can run it twice
         }
 
 
@@ -471,7 +473,7 @@ namespace Application
 #if IObservableChain
         // Demo of mxing Domain abstractions that have IObservable ports with IObservable monads (reactive extensions)
         // static version specifies an explicit type for the CSVFileReaderWriter.
-        // All other types along the dataflow are determined through type inference, even the ObservableToOutput at the end.
+        // All other types along the dataflow are determined through type inference, even the ObservableToSerial at the end.
 
         static void Application()
         {
@@ -495,7 +497,7 @@ namespace Application
             // .Sniff()
             .Where(x => x.Number > 48)
             // .Sniff()
-            .ToOutput(Console.WriteLine); // need to use ToOutput instead of WireInR(new ObservableToOutput<T>(Console.WriteLine)) because T needs to be determined by TypeInference from the output of the Where
+            .ToSerial(Console.Write); // need to use ToSerial instead of WireInR(new ObservableToSerial<T>(Console.Write)) because T needs to be determined by TypeInference from the output of the Where
 
             var program = new StartEvent().WireTo(outputer);
 
@@ -521,8 +523,8 @@ namespace Application
         // dynamic version. The CSV file must have header information. Use the write function of CSVFileReaderWriter to create a file with correct format first.
         // The the demo proper is reading the file back and passing the data along the dataflow completely dynamicall. 
         // The intial part of the dataflow uses ExpandoObject
-        // After the Select, it is an anonymous typed object and uses type inference for the rest of the way to the ObservableToOutput at the end.
-        // However the ObservableToOutput is effectively not typed because it takes object. This allows it to be Wired using WireInR rather than using an extension method to get type inference.
+        // After the Select, it is an anonymous typed object and uses type inference for the rest of the way to the ObservableToSerial at the end.
+        // However the ObservableToSerial is effectively not typed because it takes object. This allows it to be Wired using WireInR rather than using an extension method to get type inference.
 
         static void Application()
         {
@@ -539,7 +541,7 @@ namespace Application
 
             // Create a program for reading the CSV file and displaying it on the console
 
-            var outputer = new ObservableToOutput<object>(Console.Write);
+            var outputer = new ObservableToSerial<object>(Console.Write);
 
             ((IObservable<dynamic>)csvrw)
                 // .Sniff()

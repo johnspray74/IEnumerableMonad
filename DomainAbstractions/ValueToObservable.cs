@@ -26,7 +26,7 @@ namespace DomainAbstractions
     }
 
 
-    static class ValueToObservableExtensionMethods
+    static partial class ExtensionMethods
     {
         static public ValueToObservable<T> ToObservable<T>(this T value) { return new ValueToObservable<T>(value); }
     }

@@ -9,11 +9,11 @@ namespace DomainAbstractions
     // T can be normal object or ExpandoObject
     class SniffDecorator<T> : IObservable<T>  // output
     {
-        public SniffDecorator(OutputDelegate output) { this.output = output; }
+        public SniffDecorator(ObservableToSerialDelegate output) { this.output = output; }
 
         private IObservable<T> source;   // input port
 
-        public event OutputDelegate output;   // output port
+        public event ObservableToSerialDelegate output;   // output port
 
 
         // pass everything straight through from input to output, but output it to the delegate in text form as well.
@@ -35,6 +35,6 @@ namespace DomainAbstractions
     static partial class ExtensionMethods
     {
         // T can be any class including ExpandoObject
-        public static IObservable<T> Sniff<T>(this IObservable<T> observable) where T : class { var oto = new SniffDecorator<T>((x) => Debug.Write(x)); observable.WireInR(oto); return oto; }
+        public static IObservable<T> Sniff<T>(this IObservable<T> observable) { var oto = new SniffDecorator<T>((x) => Debug.Write(x)); observable.WireInR(oto); return oto; }
     }
 }

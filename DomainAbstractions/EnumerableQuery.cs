@@ -1,6 +1,8 @@
-﻿using System;
+﻿using ProgrammingParadigms;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Windows.Markup;
 
 namespace DomainAbstractions
 {
@@ -24,7 +26,7 @@ namespace DomainAbstractions
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="U"></typeparam>
-    class EnumerableQuery<T, U> : IEnumerable<U>  // output port
+    class EnumerableQuery<T, U> : IDataFlow<T>  // input port
     {
         //------------------------------------------------------------------------
         // implement the constructor
@@ -33,33 +35,31 @@ namespace DomainAbstractions
 
         private readonly EnumerableProxySource<T> proxySource;
         private readonly IEnumerable<U> query;
-        public EnumerableQuery(EnumerableProxySource<T> proxySource, IEnumerable<U> query) { this.proxySource = proxySource; this.query = query; }
+        public EnumerableQuery(EnumerableProxySource<T> proxySource, IEnumerable<U> query) { this.proxySource = proxySource; this.query = query; proxySource.Enumerable = Values(); }
 
-        private IEnumerable<T> input;  // input port
+        private IDataFlow<U> output;  // output port
 
+        private T value;
 
-        //------------------------------------------------------------------------
-        // Implement the IEnumerable interface
-
-        IEnumerator<U> IEnumerable<U>.GetEnumerator()
+        private IEnumerable<T> Values()
         {
-            if (input == null) throw new NullReferenceException();
-            proxySource.Enumerable = input;
-            return query.GetEnumerator();
+            yield return value;
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
+        //------------------------------------------------------------------------
+        // Implement the IDataFlow interface
+
+        void IDataFlow<T>.Push(T value)
         {
-            if (input == null) throw new NullReferenceException();
-            proxySource.Enumerable = input;
-            return query.GetEnumerator();
+            this.value = value;
+            foreach (var x in query) output?.Push(x);
         }
     }
 
 
 
     /// <summary>
-    /// Allows you to build the middle of query when you don't know the source. 
+    /// Allows you to build a query when you don't have the source. 
     /// This is a proxy IEnumerable
     /// It implementes IEnumerable and you give it an IEnumerable via a setter later.
     /// When the Implemented IEnumerable is used, it simple passes through to the stored IEnumerable.

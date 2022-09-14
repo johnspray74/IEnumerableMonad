@@ -36,30 +36,35 @@ namespace DomainAbstractions
         //------------------------------------------------------------------------
         // Implement the IObseravble interface
 
+        private IDisposable subscription = null;
+        bool terminated = false;  // If the query terminates, don't send further OnError or OnComplete
+
 
         void IObserverPush<T>.OnStart()
         {
             output.OnStart();
-            query.Subscribe(
+            subscription?.Dispose();
+            subscription = query.Subscribe(
                 (data) => output.OnNext(data),        // route output from query to the output of the domain abstraction
-                (ex) => output.OnError(ex),           // route exceptions from the query to the output
-                () => output.OnCompleted()            // route OnCompleted from the query to the output
+                (ex) => { output.OnError(ex); terminated = true; },           // route exceptions from the query to the output
+                () => { output.OnCompleted(); terminated = true; }            // route OnCompleted from the query to the output
                 );
+            terminated = false;
         }
 
-        void IObserverPush<T>.OnNext(T data)
+        void IObserver<T>.OnNext(T data)
         {
             queryFrontEnd.OnNext(data);
         }
 
-        void IObserverPush<T>.OnCompleted()
+        void IObserver<T>.OnCompleted()
         {
-            output.OnCompleted();
+            if (!terminated) output.OnCompleted();
         }
 
-        void IObserverPush<T>.OnError(Exception ex)
+        void IObserver<T>.OnError(Exception ex)
         {
-            output.OnError(ex);
+            if (!terminated) output.OnError(ex);
         }
     }
 

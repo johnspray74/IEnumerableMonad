@@ -30,8 +30,8 @@
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
 // #define IEnumerableQuery                 // demo of using LINQ and ALA together
-// #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
-#define IObservableQuery                 // demo or Reactive Extensions and ALA together
+#define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
+// #define IObservableQuery                 // demo or Reactive Extensions and ALA together
 
 // #define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
 // #define IObservableChainDynamic          // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads
@@ -152,8 +152,8 @@ namespace Application
 
 
 
-#if IEnumerableMonad || ALAPullUsingBind
 
+#if IEnumerableMonad || ALAPullUsingBind
         // Demo application that uses the IEnumerableMonad
         // This is the same simple application as above, but uses the deferred implementation of the List<T> monad which is IEnumerable<T>.
 
@@ -396,7 +396,7 @@ namespace Application
 #if IEnumerableQuery2
         // This domonstrates use of LINQ in an ALA application
         // The EnumerableQuery domain abstraction accepts a LINQ query as its configuration
-        // nlike the version below, this version uses a simpler lambda expression for SelectMany
+        // unlike the version above, this version uses a lambda expression for SelectMany
 
 
         static void Application()
@@ -426,11 +426,14 @@ namespace Application
 #endif
 
 
+
 #if IObservableQuery
         // This domonstrates use of LINQ in an ALA application
         // The ObservableQuery domain abstraction accepts a LINQ query as its configuration
         // Build the LINQ query starting with a subject
-        // pass both the subject and the query to the domain abstraction's constructor to configure it
+        // Pass both the subject and the query to the ObservableQuery's constructor to configure it.
+        // ObservableQuerys can be wired in a chain because they use the IObserverPush programming paradigm.
+        // IObserverPush is like IObserver but doesn't use IObservable to subscribe, instead it is wired in the normal ALA way and has a OnStart method to allow it to restart after OnCompleted or OnError
         // Unlike the version above, this version uses a named function for the SelectMany
         static void Application()
         {
@@ -441,16 +444,16 @@ namespace Application
             var subject3 = new Subject<int>();
             var query3 = subject3.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 3);
 
-            var program = new StartEvent();
-            program
+            var userStory = new StartEvent();
+            userStory
             .WireIn(new ValueToObserverPush<int>(0))
             .WireIn(new ObservableQuery<int, int>(subject1, query1))
             .WireIn(new ObservableQuery<int, int>(subject2, query2))
             .WireIn(new ObservableQuery<int, int>(subject3, query3))
             .WireIn(new ObserverPushToSerial<int>(Console.Write));
 
-            program.Run();
-            program.Run();  // test we can run it twice
+            userStory.Run();
+            userStory.Run();  // test we can run it twice
         }
 
 
@@ -462,6 +465,18 @@ namespace Application
                 observer.OnNext(x * 10 + 2);
                 observer.OnNext(x * 10 + 3);
                 observer.OnCompleted();
+                return Disposable.Empty;
+            });
+        }
+
+        static IObservable<int> MutiplyBy10AndAdd1Then2Then3ThenError(int x)
+        {
+            return Observable.Create<int>(observer =>
+            {
+                observer.OnNext(x * 10 + 1);
+                observer.OnNext(x * 10 + 2);
+                observer.OnNext(x * 10 + 3);
+                observer.OnError(new Exception("No reason"));
                 return Disposable.Empty;
             });
         }
@@ -492,18 +507,15 @@ namespace Application
 
             var outputer =
             ((IObservable<DataType>)csvrw)
-            // .Sniff()
             .Select(x => new { Firstname = x.Name.SubWord(0), Number = x.Number + 1 })
-            // .Sniff()
             .Where(x => x.Number > 48)
-            // .Sniff()
             .ToSerial(Console.Write); // need to use ToSerial instead of WireInR(new ObservableToSerial<T>(Console.Write)) because T needs to be determined by TypeInference from the output of the Where
 
-            var program = new StartEvent().WireTo(outputer);
+            var userStory = new StartEvent().WireTo(outputer);
 
 
-            program.Run();
-            program.Run();   // run the program twice to make sure it can rerun
+            userStory.Run();
+            userStory.Run();   // run the user story twice to show it can rerun
         }
 
 

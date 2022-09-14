@@ -16,11 +16,14 @@ using System.Reactive;
 
 namespace ProgrammingParadigms
 {
-    interface IObserverPush<T>
+    interface IObserverPush<T> : IObserver<T>
     {
         void OnStart();
-        void OnNext(T data);
-        void OnCompleted();
-        void OnError(Exception ex);
+        /*
+        The IObserver adds the following methods:
+        void IObserver<T>.OnNext(T data);
+        void IObserver<T>.OnCompleted();
+        void IObserver<T>.OnError(Exception ex);
+        */
     }
 }

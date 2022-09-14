@@ -40,7 +40,7 @@ namespace DomainAbstractions
 
         void IObserverPush<T>.OnError(Exception ex)
         {
-            output?.Invoke($"Exception {ex}");
+            output?.Invoke($"Exception {ex}{Environment.NewLine}");
         }
     }
 

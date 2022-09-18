@@ -18,18 +18,19 @@ namespace DomainAbstractions
     /// Writes text records to a csv file from a class T
     /// CSV file has no header lines
     /// Ports:
-    /// This domain abstraction supports three different programming paradigm ports for output, and one port for input.
+    /// This domain abstraction supports four different programming paradigm ports for output, and one port for input.
     ///    Output1: IEnumerable (implemented interface)
     ///    Output2: IObservable (implemented interface)
     ///        With these, reading from the CSV file is initiated by the destination, hence they are both pull programming paradigms despite the fact that IObservable is often taughted as being a
     ///        a push paradigm - it is only push for the data transfer itself, not for starting the transfers, which is done by the Subscribe method.
-    ///    Output3: IObserverPush (field) is initiated by the source (this class).
-    ///        A start input port is provided for this, however we could add monitoring of the file and push out its content whenever it changes.
+    ///    Output3: IObserverPush (implemented as a local) is initiated by the source (this class).
     ///        This third output option makes the programming paradigm truly a push programming paradigm.
-    /// Input : IObservablePush (implemented interface)  
-    ///        From writing to the file - push programming paradigm 
-    /// IDataFlow<string>: input for filepath (although filepath can also be set via a property.)
-    /// IEvent: input to start file read
+    ///    Output4: IDataFlow (implemented as a local) is initiated by the source (this class).
+    ///    Input : IObservablePush (implemented interface)  
+    ///        For writing to the file - push programming paradigm 
+    ///     IDataFlow<string>: input for filepath (although filepath can also be set via a property.)
+    ///     IEvent: input to start file read
+    ///        Used when the output port is Output3 or Output4, however we could also add monitoring of the file and push out its content whenever it changes.
     /// 
     /// Example of use:
     ///    private class DataType { public string Name { get; set; } public int Number { get; set; } }
@@ -50,6 +51,7 @@ namespace DomainAbstractions
 
         // ports ----------------------------------------------------------------------------------------
         private IObserverPush<T> output3;
+        private IDataFlow<T> output4;
 
         // private fields ---------------------------------------------------------------------------------
         private int pageSize = 10;
@@ -132,6 +134,7 @@ namespace DomainAbstractions
                 output1?.OnError(ex); ;
                 output1 = null;
                 output3?.OnError(ex);
+                if (output4 != null) throw (ex);
             }
             else
             {
@@ -144,7 +147,7 @@ namespace DomainAbstractions
                     T outputObject = ConvertLineToObject<T>(line);
                     output1?.OnNext(outputObject);
                     output3?.OnNext(outputObject);
-
+                    output4?.Push(outputObject);
                     await Task.Delay(1);
                 }
                 output1.OnCompleted();
@@ -187,7 +190,7 @@ namespace DomainAbstractions
             started = true;
         }
 
-        void IObserverPush<T>.OnNext(T record)
+        void IObserver<T>.OnNext(T record)
         {
             foreach (var property in typeof(T).GetProperties())
             {
@@ -198,7 +201,7 @@ namespace DomainAbstractions
         }
 
 
-        void IObserverPush<T>.OnCompleted()
+        void IObserver<T>.OnCompleted()
         {
             string directoryPath = Path.GetDirectoryName(filePath);
             if (directoryPath!="" && !Directory.Exists(directoryPath))
@@ -212,7 +215,7 @@ namespace DomainAbstractions
             started = false;
         }
 
-        void IObserverPush<T>.OnError(Exception ex)
+        void IObserver<T>.OnError(Exception ex)
         {
             string directoryPath = Path.GetDirectoryName(filePath);
             if (!Directory.Exists(directoryPath))
@@ -233,22 +236,9 @@ namespace DomainAbstractions
     /// <summary>
     /// Dynamic version of CSVFileReaderWriter
     /// No static type checking is used.
-    /// Reads text records from a csv file and outputs them in a ExpandoObject
+    /// Reads text records from a csv file and outputs them in an ExpandoObject
     /// Writes text records to a csv file from a ExpandoObject.
     /// CSV file must have two header lines, one for column name, and one for colum type (type.ToString())
-    /// Ports:
-    /// This domain abstraction supports three different programming paradigm ports for output, and one port for input.
-    ///    Output1: IEnumerable (implemented interface)
-    ///    Output2: IObservable (implemented interface)
-    ///        With these, reading from the CSV file is initiated by the destination, hence they are both pull programming paradigms despite the fact that IObservable is often taughted as being a
-    ///        a push paradigm - it is only push for the data transfer itself, not for starting the transfers, which is done by the Subscribe method.
-    ///    Output3: IObserverPush (field) is initiated by the source (this class).
-    ///        A start input port is provided for this, however we could add monitoring of the file and push out its content whenever it changes.
-    ///        This third output option makes the programming paradigm truly a push programming paradigm.
-    /// Input : IObservablePush (implemented interface)  
-    ///        From writing to the file - push programming paradigm 
-    /// IDataFlow<string>: input for filepath (although filepath can also be set via a property.)
-    /// IEvent: input to start file read
     /// 
     /// 
     /// Example of use:
@@ -274,6 +264,7 @@ namespace DomainAbstractions
 
         // ports ----------------------------------------------------------------------------------------
         private IObserverPush<ExpandoObject> output3;
+        private IDataFlow<ExpandoObject> output4;
 
         // private fields ---------------------------------------------------------------------------------
         private int pageSize = 10;
@@ -372,6 +363,7 @@ namespace DomainAbstractions
                 output1?.OnError(ex); ;
                 output1 = null;
                 output3?.OnError(ex);
+                if (output4 != null) throw (ex);
             }
             else
             {
@@ -403,6 +395,7 @@ namespace DomainAbstractions
                     }
                     output1?.OnNext(outputObject);
                     output3?.OnNext(outputObject);
+                    output4?.Push(outputObject);
                     await Task.Delay(1);
                 }
                 output1.OnCompleted();
@@ -431,7 +424,7 @@ namespace DomainAbstractions
             started = true;
         }
 
-        void IObserverPush<ExpandoObject>.OnNext(ExpandoObject eo)
+        void IObserver<ExpandoObject>.OnNext(ExpandoObject eo)
         {
             if (started)
             {
@@ -470,7 +463,7 @@ namespace DomainAbstractions
         }
 
 
-        void IObserverPush<ExpandoObject>.OnCompleted()
+        void IObserver<ExpandoObject>.OnCompleted()
         {
             if (started)
             {
@@ -487,7 +480,7 @@ namespace DomainAbstractions
             }
         }
 
-        void IObserverPush<ExpandoObject>.OnError(Exception ex)
+        void IObserver<ExpandoObject>.OnError(Exception ex)
         {
             if (started)
             {

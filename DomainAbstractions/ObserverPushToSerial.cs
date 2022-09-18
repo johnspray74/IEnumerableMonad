@@ -9,7 +9,7 @@ namespace DomainAbstractions
 {
 
     // This is an ALA domain abstraction with an input IObservable<T> port that converts to text and outputs to a delegate that takes a string parameter
-    // static version - uses a generic type T (see below for dynamic version)
+    // static version - uses a generic type T (However T can be ExpendoObject)
     // ObservableToSerial is at the end of an IObservable chain, so it intiates the data transfer - it has an IEvent input for this purpose.
 
 
@@ -28,17 +28,17 @@ namespace DomainAbstractions
         {
         }
 
-        void IObserverPush<T>.OnNext(T data)
+        void IObserver<T>.OnNext(T data)
         {
             output?.Invoke($"{data.ObjectToString()} ");
         }
 
-        void IObserverPush<T>.OnCompleted()
+        void IObserver<T>.OnCompleted()
         {
             output?.Invoke($"Complete{Environment.NewLine}");
         }
 
-        void IObserverPush<T>.OnError(Exception ex)
+        void IObserver<T>.OnError(Exception ex)
         {
             output?.Invoke($"Exception {ex}{Environment.NewLine}");
         }
@@ -52,13 +52,17 @@ namespace DomainAbstractions
     delegate void ObserverPushSerialDelegate(string output);
 
 
+    static partial class ExtensionMethods
+    {
+        public static ObserverPushToSerial<T> ToSerial<T>(this IObserverPush<T> observerPush, ObserverPushSerialDelegate output) where T : class { var o = new ObserverPushToSerial<T>(output); observerPush.WireInR(o); return o; }
+    }
 
 
 
     // dynamic version
     // input port is IObservable<object> whereas the static version the input port is IObservable<T> 
-    // Actually the static version will also handle dynamic because it can take a type object and will handle an ExpandoClass
-    // The only advantage of this version is you can use WireTo without providing a type on the new, whereas to use the static version in a dynamic you would need to provide the type (either object or ExpandoClass),
+    // Actually the static version will also handle dynamic because it can take a type object and will handle an ExpandoObject class
+    // The advantage of this version is you can use WireTo without providing a type on the new, whereas to use the static version in a dynamic you would need to provide the type (either object or ExpandoObject),
     // or use the ToSerial extension method to make type inference work.
     class ObserverPushToSerial : IObserverPush<object>
     {
@@ -68,19 +72,20 @@ namespace DomainAbstractions
 
         void IObserverPush<object>.OnStart()
         {
+            output?.Invoke($"Start ");
         }
 
-        void IObserverPush<object>.OnNext(object data)
+        void IObserver<object>.OnNext(object data)
         {
             output?.Invoke($"{data.ObjectToString()} ");
         }
 
-        void IObserverPush<object>.OnCompleted()
+        void IObserver<object>.OnCompleted()
         {
             output?.Invoke($"Complete{Environment.NewLine}");
         }
 
-        void IObserverPush<object>.OnError(Exception ex)
+        void IObserver<object>.OnError(Exception ex)
         {
             output?.Invoke($"Exception {ex}");
         }

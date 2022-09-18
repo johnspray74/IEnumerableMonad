@@ -410,15 +410,16 @@ namespace Application
 
 
             // Now create an ALA program using the domain abstraction, Query
-            var program = (EnumerableToSerial<int>)
-            new List<int> { 0 }
-            .WireInR(new EnumerableQuery<int, int>(proxySource1, query1) { instanceName = "Query1" })
-            .WireInR(new EnumerableQuery<int, int>(proxySource2, query2) { instanceName = "Query2" })
-            .WireInR(new EnumerableQuery<int, int>(proxySource3, query3) { instanceName = "Query3" })
-            .WireInR(new EnumerableToSerial<int>(Console.Write));
+            var userStory = new StartEvent();
+            userStory
+            .WireIn(new ValueToDataFlow<int>(0))
+            .WireIn(new EnumerableQuery<int, int>(proxySource1, query1) { instanceName = "Query1" })
+            .WireIn(new EnumerableQuery<int, int>(proxySource2, query2) { instanceName = "Query2" })
+            .WireIn(new EnumerableQuery<int, int>(proxySource3, query3) { instanceName = "Query3" })
+            .WireIn(new DataFlowToSerial<int>(Console.Write));
 
-            program.Run();
-
+            userStory.Run();
+            userStory.Run();  // Make sure the user story can be rerun
         }
 
 

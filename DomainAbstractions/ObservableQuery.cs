@@ -46,8 +46,7 @@ namespace DomainAbstractions
             subscription?.Dispose();
             subscription = query.Subscribe(
                 (data) => output.OnNext(data),        // route output from query to the output of the domain abstraction
-                (ex) => { output.OnError(ex); terminated = true; },           // route exceptions from the query to the output
-                () => { output.OnCompleted(); terminated = true; }            // route OnCompleted from the query to the output
+                (ex) => { output.OnError(ex); terminated = true; }           // route exceptions from the query to the output
                 );
             terminated = false;
         }
@@ -57,15 +56,17 @@ namespace DomainAbstractions
             queryFrontEnd.OnNext(data);
         }
 
+        void IObserver<T>.OnError(Exception ex)
+        {
+            queryFrontEnd.OnError(ex);
+            if (!terminated) output.OnError(ex);
+        }
+
         void IObserver<T>.OnCompleted()
         {
             if (!terminated) output.OnCompleted();
         }
 
-        void IObserver<T>.OnError(Exception ex)
-        {
-            if (!terminated) output.OnError(ex);
-        }
     }
 
 }

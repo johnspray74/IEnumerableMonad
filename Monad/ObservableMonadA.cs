@@ -34,46 +34,25 @@ namespace Monad.ObservableMonadA
             // We can't just pass it the outputObserver directly, becasue the OnCompleted call coming out of the Action needs to be intercepted.
             // (When the Action completes, it doesn't mean the entoire output sequence has completed
             // So we have to give action an loaclly created observer
-            return Observable.Create<U>(outputObserver=>
+            return Observable.Create<U>(outputObserver =>
             {
                 source.Subscribe(x => 
-                {
-                // each time we get a value from the source, call the action and give the output observer to it.
-                action(x, new ObserverDecorator<U>(
-                    value => outputObserver.OnNext(value),
+                    {
+                        // each time we get a value from the source, call the action and give the output observer to it.
+                        action(x, Observer.Create<U>(
+                            value => outputObserver.OnNext(value),
+                            ex => outputObserver.OnError(ex),
+                            () => { }
+                        ));
+                    },
                     ex => outputObserver.OnError(ex),
-                    () => { }
-                    ));
-                },
-                ex => outputObserver.OnError(ex),
-                () => outputObserver.OnCompleted()
+                    () => outputObserver.OnCompleted()
                 );
                 return Disposable.Empty;
             });
         }
 
 
-
-        // Simple IObserver class where you provide the OnNext, OnClomplete and OnError methods in the constructor.
-        private class ObserverDecorator<U> : IObserver<U>
-        {
-            //------------------------------------------------------------------------
-            // implement the constructor
-
-            private Action<U> onNext;
-            private Action onCompleted;
-            private Action<Exception> onError;
-
-            public ObserverDecorator(Action<U> onNext, Action<Exception> onError, Action onCompleted) { this.onNext = onNext; this.onCompleted = onCompleted; this.onError = onError; }
-
-            //------------------------------------------------------------------------
-            // implement the IObserver
-            void IObserver<U>.OnCompleted() => onCompleted();
-
-            void IObserver<U>.OnError(Exception ex) => onError(ex);
-
-            void IObserver<U>.OnNext(U value) => onNext(value);
-        }
 
 
 #else
@@ -117,12 +96,18 @@ namespace Monad.ObservableMonadA
             // implement the IObservable
             // This interface is called by the next monad down the chain to give us its observer
 
-            IObserver<U> output;
+            private IObserver<U> output;
+            private ObserverDecorator<U> innerObserver;
 
             IDisposable IObservable<U>.Subscribe(IObserver<U> observer)
             {
                 output = observer;
                 // when the source produces numbers, they will go to the IObserver interface of this object, so will apear at the OnNext method below..
+                innerObserver = new ObserverDecorator<U>(
+                    value => output.OnNext(value),
+                    ex => output.OnError(ex),
+                    () => { }
+                    );
                 source.Subscribe(this);
                 return Disposable.Empty;
             }
@@ -143,38 +128,33 @@ namespace Monad.ObservableMonadA
 
             void IObserver<T>.OnNext(T value)
             {
-                action(value, new ObserverDecorator<U>(
-                    value => output.OnNext(value),
-                    ex => output.OnError(ex),
-                    () => { }
-                    )  // intercep OnComplete, we are combining the IObservables from the function
-                );
+                action(value, innerObserver);  // intercep OnComplete, we are combining the IObservables from the function
             }
+
+
+            // Simple IObserver class where you provide the OnNext, OnClomplete and OnError methods in the constructor.
+            private class ObserverDecorator<T> : IObserver<T>
+            {
+                //------------------------------------------------------------------------
+                // implement the constructor
+
+                private Action<T> onNext;
+                private Action onCompleted;
+                private Action<Exception> onError;
+
+                public ObserverDecorator(Action<T> onNext, Action<Exception> onError, Action onCompleted) { this.onNext = onNext; this.onCompleted = onCompleted; this.onError = onError; }
+
+                //------------------------------------------------------------------------
+                // implement the IObserver
+                void IObserver<T>.OnCompleted() => onCompleted();
+
+                void IObserver<T>.OnError(Exception ex) => onError(ex);
+
+                void IObserver<T>.OnNext(T value) => onNext(value);
+            }
+
         }
+
 #endif
-
-
-        // Simple IObserver class where you provide the OnNext, OnClomplete and OnError methods in the constructor.
-        private class ObserverDecorator<U> : IObserver<U>
-        {
-            //------------------------------------------------------------------------
-            // implement the constructor
-
-            private Action<U> onNext;
-            private Action onCompleted;
-            private Action<Exception> onError;
-
-            public ObserverDecorator(Action<U> onNext, Action<Exception> onError, Action onCompleted) { this.onNext = onNext; this.onCompleted = onCompleted; this.onError = onError; }
-
-            //------------------------------------------------------------------------
-            // implement the IObserver
-            void IObserver<U>.OnCompleted() => onCompleted();
-
-            void IObserver<U>.OnError(Exception ex) => onError(ex);
-
-            void IObserver<U>.OnNext(U value) => onNext(value);
-        }
-
-
     }
 }

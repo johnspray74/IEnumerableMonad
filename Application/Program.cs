@@ -25,13 +25,13 @@
 // #define ALAPullUsingBind                 // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
 
 // #define IObservableMonadF                // demo of deferred monad using IObserable. Bind takes a Func. Bind is in Monad.ObservableMonadF namespace
-// #define IObservableMonadA                // demo of deferred monad using IObserable. Bind takes an Action. Bind is in Monad.ObservableMonadA namespace
+#define IObservableMonadA                // demo of deferred monad using IObserable. Bind takes an Action. Bind is in Monad.ObservableMonadA namespace
 // #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
 // #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
 
 // #define IEnumerableQuery                 // demo of using LINQ and ALA together
 // #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
-#define IObservableQuery                 // demo or Reactive Extensions and ALA together
+// #define IObservableQuery                 // demo or Reactive Extensions and ALA together
 
 // #define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
 // #define IObservableChainDynamic          // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads

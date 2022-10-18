@@ -70,10 +70,13 @@ namespace DomainAbstractions
         // implement the IObservable
         // This interface is called by the next monad down the chain to give us its observer
 
+        private IDisposable subscription = null;
+
         IDisposable IObservable<U>.Subscribe(IObserver<U> observer)
         {
             nextObserver = observer;
-            input.Subscribe(this);
+            subscription?.Dispose();
+            subscription = input.Subscribe(this);
             return Disposable.Empty;
         }
 

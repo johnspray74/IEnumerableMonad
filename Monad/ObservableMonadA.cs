@@ -98,6 +98,7 @@ namespace Monad.ObservableMonadA
 
             private IObserver<U> output;
             private ObserverDecorator<U> innerObserver;
+            private IDisposable subscription = null;
 
             IDisposable IObservable<U>.Subscribe(IObserver<U> observer)
             {
@@ -108,7 +109,8 @@ namespace Monad.ObservableMonadA
                     ex => output.OnError(ex),
                     () => { }
                     );
-                source.Subscribe(this);
+                subscription?.Dispose();
+                subscription = source.Subscribe(this);
                 return Disposable.Empty;
             }
 
@@ -133,6 +135,9 @@ namespace Monad.ObservableMonadA
 
 
             // Simple IObserver class where you provide the OnNext, OnClomplete and OnError methods in the constructor.
+            // Note that Observer.Create could be used instead of this class, however Observer.Create would need to be called for every call of the action function
+            // otherwise it would stop working if it gets an OnCompleted or OnError call from the action.
+            // By using ObserverDecorator which just passes through everything, we can instantiate it once.
             private class ObserverDecorator<T> : IObserver<T>
             {
                 //------------------------------------------------------------------------

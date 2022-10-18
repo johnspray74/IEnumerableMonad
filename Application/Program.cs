@@ -2,17 +2,17 @@
 // See that website for full discussion of the comparison between ALA and monads
 // and simplified code snippets taken from this project
 
-// In brief ALA and monads are both composition patterns.
+// In brief, both ALA and monads are 'composition' patterns.
 // ALA composes objects and monads compose functions.
 // ALA is a more general solution for composition. It is also easier to understand because it uses plain objects.
 // Monads, at least the deferred type of monads, generate a lot of code under the covers, which makes them difficult to understand and explain.
 // Because ALA is a more general solution, we can implement monad behaviour (composition of functions) using ALA.
 // This sample code starts with simple non-defferred monads and works through deferred monads and finally doing the equivalent functionality of monads in ALA.
-// Finally we show how existing monads can be used with ALA.
-// We do this for both IEnumerable and IObservable monads.
+// Finally we show how an existing monad library such as LINQ or RXs can be used with ALA.
+// We do this for both IEnumerable and IObservable based monads.
 
 // The different examples in this project are controlled by conditional compiling using defines, which are just below.
-// The defines bring in different namespaces so that the examples use either ALA programming paradigms or the relavant monad Bind function.
+// The defines bring in different namespaces so that the examples use either ALA DomainAbstractions and ProgrammingParadigms namespace or the relevant Bind function in the relavant Monad namespace.
 
 
 
@@ -21,20 +21,22 @@
 // #define ListMonad                        // demo of immediate monad using List. Bind is in the Monad.List namespace
 
 // #define IEnumerableMonad                 // demo of deferred monad using IEnumerable. Bind is in Monad.Enumerable namespace
-// #define ALAPullUsingWireIn               // demo of deferred monad using IEnumerable built using an ALA domain abstraction, but still wiring up using WireIn
-// #define ALAPullUsingBind                 // demo of deferred monad using IEnumerable built using an ALA domain abstraction, and Bind uses WireIn
+// #define ALAPullUsingIEnumerable          // demo of ALA using IEnumerable as the programming paradigm interface
+// #define ALAPullUsingIEnumerableAndBind   // demo of ALA using IEnumerable but with Bind syntax the same as the monad version
 
 // #define IObservableMonadF                // demo of deferred monad using IObserable. Bind takes a Func. Bind is in Monad.ObservableMonadF namespace
-#define IObservableMonadA                // demo of deferred monad using IObserable. Bind takes an Action. Bind is in Monad.ObservableMonadA namespace
-// #define ALAPushUsingWireIn               // demo of deferred monad using IObserable built on an ALA domain abstraction, but still Wiring using WireIn.
-// #define ALAPushUsingBind                 // demo of deferred monad using IObserable built on an ALA domain abstraction, Bind uses WireIn.
+// #define IObservableMonadA                // demo of deferred monad using IObserable. Bind takes an Action. Bind is in Monad.ObservableMonadA namespace
+// #define ALAPushUsingIObservable          // demo of ALA using IObserable  as the programming paradigm interface.
+// #define ALAPushUsingIObservableAndBind   // demo of ALA using IObserable but with syntax identical to the monad version
+// #define ALAPushUsingIObserverPush        // demo of ALA using IObserverPush as the programming paradigm interface
+// #define ALAPushUsingIObserverPushAndBind // demo of ALA using IObserverPush but with Bind syntax the same as the monad version
 
-// #define IEnumerableQuery                 // demo of using LINQ and ALA together
-// #define IEnumerableQuery2                   // demo of using LINQ and ALA together simpler version for website
-// #define IObservableQuery                 // demo or Reactive Extensions and ALA together
+// #define ALAWithIEnumerableQuery                 // demo of using LINQ and ALA together by using a domain abstraction that is configured with a LINQ Query
+// #define ALAWithIEnumerableQuery2                // demo of using LINQ and ALA together simpler version for website
+// #define ALAWithIObservableQuery                 // demo of using Reactive Extensions and ALA together by using a domain abstraction that is configured with an RX expression
 
-// #define IObservableChain                  // Chaining Domain abstractions that use iObservable as a port with monads
-// #define IObservableChainDynamic          // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads
+// #define ALAWithIObservableChain                 // Chaining Domain abstractions that use iObservable as a port with monads
+#define ALAWithIObservableChainDynamic          // Chaining Domain abstractions that use iObservable<dynamic> as a port with monads
 
 
 
@@ -71,8 +73,9 @@ using Monad.ObservableMonadF;
 using Monad.ObservableMonadA;
 #endif
 
-#if ALAPullUsingWireIn || ALAPushUsingWireIn || ALAPullUsingBind || ALAPushUsingBind || IEnumerableQuery || IEnumerableQuery2 || IObservableQuery || IObservableChain || IObservableChainDynamic
+#if ALAPullUsingIEnumerable || ALAPushUsingIObservable || ALAPullUsingIEnumerableAndBind || ALAPushUsingIObservableAndBind || ALAWithIEnumerableQuery || ALAWithIEnumerableQuery2 || ALAWithIObservableQuery || ALAWithIObservableChain || ALAWithIObservableChainDynamic || ALAPushUsingIObserverPush || ALAPushUsingIObserverPushAndBind
 using DomainAbstractions;
+using ProgrammingParadigms;
 #endif
 
 
@@ -88,7 +91,6 @@ using System.Reactive.Disposables;
 using System.Collections;
 using System.Reactive.Subjects;
 using System.Dynamic;
-using ProgrammingParadigms;
 
 namespace Application
 {
@@ -153,7 +155,7 @@ namespace Application
 
 
 
-#if IEnumerableMonad || ALAPullUsingBind
+#if IEnumerableMonad || ALAPullUsingIEnumerableAndBind
         // Demo application that uses the IEnumerableMonad
         // This is the same simple application as above, but uses the deferred implementation of the List<T> monad which is IEnumerable<T>.
 
@@ -164,13 +166,19 @@ namespace Application
 
         static void Application()
         {
-            var program = new[] { 0 }  // start with an iEnumerable with one item
+            var startValue = new[] { 0 };
+            var program = startValue
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3);
 
-            Console.WriteLine(program.ObjectStructureToString());
+            Console.WriteLine(program.ObjectStructureToString());  // print out the object structure of the program
+
             var result = program.ToList();  // now run the program
+            Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
+
+            // we run deferred monads twice to ensure they work repeatedly
+            result = program.ToList();  
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
 
@@ -200,7 +208,7 @@ namespace Application
 
 
 
-#if ALAPullUsingWireIn
+#if ALAPullUsingIEnumerable
         // Demo ALA application that does the same job as the IEnumerableMonad application above
         // The ALA application differs by using .WireInR and new keywords instead of .Bind.
         // It uses a Domain Abstraction class called EnumerableFunction, whichi is configured with a function returns many values, so it returns an IEnumerable
@@ -212,6 +220,8 @@ namespace Application
             .WireInR(new EnumerableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
             .WireInR(new EnumerableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3));
             var result = program.ToList();
+            Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
+            result = program.ToList();
             Console.WriteLine($"Final result is {result.Select(x => x.ToString()).Join(" ")}");  // This Join comes from the Foundation layer of this project
         }
 
@@ -233,7 +243,7 @@ namespace Application
 
 
 
-#if IObservableMonadF || ALAPushUsingBind
+#if IObservableMonadF || ALAPushUsingIObservableAndBind
         // The Demo for IObservableMonadF and the demo for the ALA application both use the same application code here.
         // However different Bind function sin different namespaces are used: Monad.Observable and DomainAbstractions resp.
         // This demo is the IObservable equivalent of the previous iEnumerable application
@@ -244,13 +254,18 @@ namespace Application
             // Demonstration of composing functions that take an int and return an IObservable<int> (MutiplyBy10AndAdd1Then2Then3)
             // using a Bind function function
 
-            Observable.Create<int>(observer => { observer.OnNext(0); observer.OnCompleted();  return Disposable.Empty; })
+            var program =
+            Observable.Create<int>(observer => { observer.OnNext(0); observer.OnCompleted(); return Disposable.Empty; })
             .Bind(MutiplyBy10AndAdd1Then2Then3)
             .Bind(MutiplyBy10AndAdd1Then2Then3)
-            .Bind(MutiplyBy10AndAdd1Then2Then3)
-            .Subscribe((x) => Console.Write($"{x} "),
+            .Bind(MutiplyBy10AndAdd1Then2Then3);
+            program.Subscribe((x) => Console.Write($"{x} "),
                         (ex) => Console.Write($"Exception {ex}"),
-                        () => Console.Write("Complete")
+                        () => Console.WriteLine("Complete")
+                        );
+            program.Subscribe((x) => Console.Write($"{x} "),
+                        (ex) => Console.Write($"Exception {ex}"),
+                        () => Console.WriteLine("Complete")
                         );
             Console.WriteLine();
             Console.WriteLine("Note: # are written out in Bind where it intercepted OnCompeted calls to effect joining all the observables into a single observable");
@@ -283,14 +298,19 @@ namespace Application
             // This alleviates the function from having to create an IObservable object, and that Object in turn having to receive an IObserver on its Subscribe.
             // Instead the function can immediately run and just put its output to the observer object that was passed to it up front.
             // If you look at the MutiplyBy10AndAdd1Then2Then3 function compared with the previous demo, it just immediately calls observer.OnNexts
+            // Note that this syntactically doesn't quite acheive the same as the monad version because of the .Bind<int,int> instead of just .Bind
 
-            Observable.Create<int>(observer => { observer.OnNext(0); observer.OnCompleted();  return Disposable.Empty; })
-            .Bind<int,int>(MutiplyBy10AndAdd1Then2Then3)
-            .Bind<int,int>(MutiplyBy10AndAdd1Then2Then3)
-            .Bind<int,int>(MutiplyBy10AndAdd1Then2Then3)
-            .Subscribe((x) => Console.Write($"{x} "),
+            var program = Observable.Create<int>(observer => { observer.OnNext(0); observer.OnCompleted(); return Disposable.Empty; })
+            .Bind<int, int>(MutiplyBy10AndAdd1Then2Then3)  // type inference wont work
+            .Bind<int, int>(MutiplyBy10AndAdd1Then2Then3)
+            .Bind<int, int>(MutiplyBy10AndAdd1Then2Then3);
+            program.Subscribe((x) => Console.Write($"{x} "),
                         (ex) => Console.Write($"Exception {ex}"),
-                        () => Console.Write("Complete")
+                        () => Console.WriteLine("Complete")
+                        );
+            program.Subscribe((x) => Console.Write($"{x} "),
+                        (ex) => Console.Write($"Exception {ex}"),
+                        () => Console.WriteLine("Complete")
                         );
         }
 
@@ -310,7 +330,7 @@ namespace Application
 
 
 
-#if ALAPushUsingWireIn
+#if ALAPushUsingIObservable
         // Demo ALA application that does the same job as the IObservableMonadA application above
         // The ALA application differs by using .WireInR and new keywords instead of .Bind.
         // It uses a Domain Abstraction class called ObservableFunction, which is an abstraction to be configured with a function that returns many values, and so takes an IObservable for its output
@@ -323,8 +343,10 @@ namespace Application
             .WireInR(new ObservableFunction<int, int>(MutiplyBy10AndAdd1Then2Then3))
             .WireInR(new ObservableToSerial<int>(Console.Write));
 
-            new StartEvent().WireTo(outputer)
-                            .Run();
+            var program = new StartEvent().WireTo(outputer);
+            program.Run();
+            // run the program twice to prove that none of the IObservables are locked up, nor get double subscribed
+            program.Run();
         }
 
 
@@ -342,23 +364,79 @@ namespace Application
 #endif
 
 
-        // We have now done seven demo applications that all do basically the same thing based on IEnumerable and Observable:
-        // 1. IEnumerable Monad using Bind
-        // 2. IEnumerable ALA using WireInR and new
-        // 3. IEnumerable ALA using Bind to the WireInR and new to get the same exact application code as the monad versions (curiousity)
-        // 4. IObservable Monad using Bind
-        // 5. IObservable Monad using Bind that takes Actions that take an IObserver 
-        // 6. IObservable ALA using WireInR and new
-        // 7. IObservable ALA using Bind to the WireInR and new to get the same exact application code as the monad version (curiousity)
+
+#if ALAPushUsingIObserverPush
+        // Demo ALA application using a domain abstraction called ObserverPushAction which has IObserverPush ports and does similar job to a monad.
+        // You configure the ObserverPushAction with an action that takes a T and an IObserver<U> for it to output to.
+        static void Application()
+        {
+            var program = new StartEvent();
+            program
+            .WireIn(new ValueToObserverPush<int>(0))
+            .WireIn(new ObserverPushAction<int,int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireIn(new ObserverPushAction<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireIn(new ObserverPushAction<int, int>(MutiplyBy10AndAdd1Then2Then3))
+            .WireIn(new ObserverPushToSerial<int>(Console.Write));
+
+            program.Run();
+            program.Run();
+        }
+
+
+        static void MutiplyBy10AndAdd1Then2Then3(int x, IObserver<int> output)
+        {
+            output.OnNext(x * 10 + 1);
+            output.OnNext(x * 10 + 2);
+            output.OnNext(x * 10 + 3);
+            output.OnCompleted();
+        }
+#endif
 
 
 
 
 
-#if IEnumerableQuery
+#if ALAPushUsingIObserverPushAndBind
+        // Demo ALA application using a domain abstraction called ObserverPushAction which has IObserverPush ports and does similar job to a monad.
+        // You configure the ObserverPushAction with an action that takes a T and an IObserver<U> for it to output to.
+        // This is same as previous version but uses a Bind function instead of .WireIn(new ObserverPushAction<int, int>(MutiplyBy10AndAdd1Then2Then3))
+        // Note that this syntactically doesn't quite acheive the same as the monad version for two reasons:
+        // 1. We end up having to use Bind<int,int> instead of just Bind because the compiler can't infer the Bind's U type when the second parameter is an action (surprizingly it worked for functions that return IObservable<U> as we did above).
+        //    The only workaround I could find was to add a dummy U type parameter to Bind and pass it a dummy value of type U, which is still syntatically deficient. 
+        //    The second two Binds that pass in a 0 use this method. Bind needed an overload that takes three parameters to make this work - its completely ugly.
+        // 2. We need to cast ValueToObservePush to IBindable before we can use Bind on it
+        // So basically in ALA we fail to reproduce monad .Bind syntax when composing Action instead of a Func. Actions are not really used in real monads anyway.
+        static void Application()
+        {
+            var program = new StartEvent();
+            ((IBindable<int>)program.WireIn(new ValueToObserverPush<int>(0)))
+            .Bind<int, int>(MutiplyBy10AndAdd1Then2Then3)  // type inference wont work
+            .Bind(0, MutiplyBy10AndAdd1Then2Then3)  // alternative to Bind<int,int> that allows type inference to work
+            .Bind(0, MutiplyBy10AndAdd1Then2Then3)
+            .WireIn(new ObserverPushToSerial<int>(Console.Write));
+
+            program.Run();
+            program.Run();
+        }
+
+        static void MutiplyBy10AndAdd1Then2Then3(int x, IObserver<int> output)
+        {
+            output.OnNext(x * 10 + 1);
+            output.OnNext(x * 10 + 2);
+            output.OnNext(x * 10 + 3);
+            output.OnCompleted();
+        }
+#endif
+
+
+
+
+
+
+#if ALAWithIEnumerableQuery
         // This domonstrates use of LINQ in an ALA application
         // The EnumerableQuery domain abstraction accepts a LINQ query as its configuration
-
+        // The programming paradigm interface is IEnumerable
 
         static void Application()
         {
@@ -370,16 +448,17 @@ namespace Application
             var query3 = proxySource3.SelectMany(MutiplyBy10AndAdd1Then2Then3).Select(x => x + 3);
 
 
-            // Now create an ALA program using the domain abstraction, Query
-            var program = (EnumerableToConsoleOutput<int>)
-            new List<int> { 0 }
-            .WireInR(new EnumerableQuery<int, int>(proxySource1, query1) { instanceName = "Query1" })
-            .WireInR(new EnumerableQuery<int, int>(proxySource2, query2) { instanceName = "Query2" })
-            .WireInR(new EnumerableQuery<int, int>(proxySource3, query3) { instanceName = "Query3" })
-            .WireInR(new EnumerableToConsoleOutput<int>());
+            var userStory = new StartEvent();
+            userStory
+            .WireIn(new ValueToDataFlow<int>(0))
+            .WireIn(new EnumerableQuery<int, int>(proxySource1, query1) { instanceName = "Query1" })
+            .WireIn(new EnumerableQuery<int, int>(proxySource2, query2) { instanceName = "Query2" })
+            .WireIn(new EnumerableQuery<int, int>(proxySource3, query3) { instanceName = "Query3" })
+            .WireIn(new DataFlowToSerial<int>(Console.Write));
 
-            program.Run();
-
+            userStory.Run();
+            Console.WriteLine();
+            userStory.Run();  // Make sure the user story can be rerun
         }
 
         private static IEnumerable<int> MutiplyBy10AndAdd1Then2Then3(int x)
@@ -393,10 +472,11 @@ namespace Application
 
 #endif
 
-#if IEnumerableQuery2
+#if ALAWithIEnumerableQuery2
         // This domonstrates use of LINQ in an ALA application
         // The EnumerableQuery domain abstraction accepts a LINQ query as its configuration
         // unlike the version above, this version uses a lambda expression for SelectMany
+        // The programming paradigm interface is IDataFlow
 
 
         static void Application()
@@ -419,6 +499,7 @@ namespace Application
             .WireIn(new DataFlowToSerial<int>(Console.Write));
 
             userStory.Run();
+            Console.WriteLine();
             userStory.Run();  // Make sure the user story can be rerun
         }
 
@@ -428,7 +509,7 @@ namespace Application
 
 
 
-#if IObservableQuery
+#if ALAWithIObservableQuery
         // This domonstrates use of LINQ in an ALA application
         // The ObservableQuery domain abstraction accepts a LINQ query as its configuration
         // Build the LINQ query starting with a subject
@@ -486,7 +567,7 @@ namespace Application
 
 
 
-#if IObservableChain
+#if ALAWithIObservableChain
         // Demo of mxing Domain abstractions that have IObservable ports with IObservable monads (reactive extensions)
         // static version specifies an explicit type for the CSVFileReaderWriter.
         // All other types along the dataflow are determined through type inference, even the ObservableToSerial at the end.
@@ -531,7 +612,7 @@ namespace Application
 
 
 
-#if IObservableChainDynamic
+#if ALAWithIObservableChainDynamic
         // Demo of mxing Domain abstractions that have IObservable ports with IObservable monads (reactive extensions)
         // dynamic version. The CSV file must have header information. Use the write function of CSVFileReaderWriter to create a file with correct format first.
         // The the demo proper is reading the file back and passing the data along the dataflow completely dynamicall. 

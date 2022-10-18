@@ -78,13 +78,17 @@ namespace Monad.Enumerable
         //------------------------------------------------------------------------
         // Implement the IEnumerable interface
 
+        private IEnumerator<T> sourceEnumerator = null;    // the IEnumerator from the source 
+
         IEnumerator<U> IEnumerable<U>.GetEnumerator()
         {
+            sourceEnumerator = source.GetEnumerator();
             return (IEnumerator<U>)this;
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
+            sourceEnumerator = source.GetEnumerator();  
             return this;
         }
 
@@ -92,11 +96,9 @@ namespace Monad.Enumerable
         //------------------------------------------------------------------------
         // Implement the IEnumertor interface
 
-        // These two fields define our state
-        // The first one can have a state of null, which is the state before we got the first value, otherwise it holds the state as we go through the source IEnumerator
-        private IEnumerator<T> sourceEnumerator = null;    // the IEnumerator from the source (left side) of the bind
-        
+       
         // This holds the state as we go through IEnumerator returned from the function
+        // A valid state is null, which is when we need to get the next value from the source
         private IEnumerator<U> functionEnumerator = null;  // The current IEnumerator returned from the function
 
         U IEnumerator<U>.Current => functionEnumerator.Current;   // If the output has already used MoveNext and returned true, there wil always be a current value sitting in the functionEnumerator
@@ -121,7 +123,6 @@ namespace Monad.Enumerable
                     // no values left in the current IEnumertor from the function
                 }
                 // There is no IEnumerator from the function (at the beginning), or it is exhausted
-                if (sourceEnumerator == null) sourceEnumerator = source.GetEnumerator();  // At the very start we need to get the IEnumerator from the source. This hapns only once.
                 if (sourceEnumerator.MoveNext())
                 {
                     functionEnumerator = function(sourceEnumerator.Current).GetEnumerator();
@@ -135,8 +136,9 @@ namespace Monad.Enumerable
 
         void IEnumerator.Reset()
         {
+            sourceEnumerator.Reset();
             functionEnumerator = null;
-            sourceEnumerator = null;  
+            // sourceEnumerator = null;  
         }
     }
 }

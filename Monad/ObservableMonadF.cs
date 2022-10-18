@@ -89,12 +89,14 @@ namespace Monad.ObservableMonadF
             // This interface is called by the next monad down the chain to give us its observer
 
             IObserver<U> output;
+            private IDisposable subscription = null;
 
             IDisposable IObservable<U>.Subscribe(IObserver<U> observer)
             {
                 output = observer;
                 // when the source produces numbers, they will go to the IObserver interface of this object, so will apear at the OnNext method below..
-                source.Subscribe(this);   
+                subscription?.Dispose();
+                subscription = source.Subscribe(this);   
                 return Disposable.Empty;
             }
 

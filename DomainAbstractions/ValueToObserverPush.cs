@@ -5,7 +5,14 @@ using ProgrammingParadigms;
 
 namespace DomainAbstractions
 {
-    class ValueToObserverPush<T> :IEvent
+    // This is a simple domain abstraction that has an input iEvent port and an output IObserverPush port
+    // It is configured with a value.
+    // When an event arives at the input, it outputs the value, complete with OnStart and OnCompleted calls.
+
+
+
+
+    class ValueToObserverPush<T> : IEvent, IBindable<T>
     {
         private T value;
 

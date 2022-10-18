@@ -61,9 +61,12 @@ namespace DomainAbstractions
 
         public ObservableToSerial(ObservableToSerialDelegate output) { this.output = output; }
 
+        private IDisposable subscription = null;
+
         void IEvent.Execute()
         {
-            source.Subscribe(
+            subscription?.Dispose();
+            subscription = source.Subscribe(
                              (x) => output?.Invoke($"{x.ObjectToString()}{Environment.NewLine}"),
                              (ex) => output?.Invoke($"Exception {ex}"),
                              () => output?.Invoke($"Complete{Environment.NewLine}")

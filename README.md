@@ -31,19 +31,22 @@ We wouldn't normally do that in ALA, but it shows that we can get the monad synt
 Monads are a two-layer pattern. The monad implementaion is in the Monad folder, and the application is in the Application folder.
 ALA is a 4 layer pattern so the implementation is in the Domain Abstractions, Programming Paradigms and Foundation folders, and the application is again in the Application folder.
 
-This example is one of a set of examples implementing different types of monads. Others are Continuation, IObservable, IMaybe and State monads.
+This example is one of a set of examples implementing different types of monads. Others are Continuation, IObservable, and IMaybe monads.
 
-In this example application, the composed functions take the inpu and return three numbers with 1,2,3 append the end of the input number.
+In this example application, the composed function takes a single input parameter and returns a list of three numbers being the input number with 1,2 &3 appended to the end.
 
-If you don't understand monads, the section in chapter 3 of the online book fully explains them (I think in a better way than other explanations).
+If you don't understand monads, the section in chapter 6 of the online book fully explains them (I think in a better way than other explanations).
 It wasn't until I implemented them myself with this set of examples (for the purpose of comparing what they do and how they work with ALA) that
-I realised that all the previous explanations I had read had been inadequate and even inaccurate. 
+I realised that all the previous explanations I had read had been inadequate and at times inaccurate. 
 For example, some high level explanations suggest that the monad object returned by the function is like a value in a box in a box,
 which simply needs unwraping to make the type correct, and that is what is returned by the bind function. 
-None of these monads do that. The returned value of the function is never a wrapped wrapped value.
-Rather the monad object returned by the function has the same type as the Bind's return value.
-But it is not the object that Bind returns. Bind generally creates a new monad object and uses the one returned by the function to get data for the new object in some way that makes sense for the particular monad.
-So go onto the ALA  web site <http://www.abstractionlayeredarchitecture.com> and have a read if you really want to understand monads. 
+None of these monads do that. The returned value of the function is never a wrapped wrapped value, it is just a wrapped value.
+It has the same as the Bind functions's return value, which is also, of course, a wrapped value.
+However, Bind doesn't necessarily return the value that is returned by the function.
+Bind generally creates a new wrapped object and uses the one returned by the function to get data for the new object in some way
+that makes sense for the particular monad.
+
+So go onto the ALA  web site <http://www.abstractionlayeredarchitecture.com> and have a read of chapter six if you really want to understand monads. 
   
 ## To run the demo monad application
 
